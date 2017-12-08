@@ -52,6 +52,7 @@ class Multibucket(Configurable):
     self.generate_placeholder()
     embeddings = []
     for i, bucket in enumerate(self):
+      #print ("multibuckets.py(__call__):bucket:",i, bucket)
       if i > 0:
         reuse = True
       with tf.variable_scope(self.name+'-multibucket', reuse=reuse):

@@ -41,6 +41,7 @@ class Dataset(Configurable):
     """"""
     
     nlp_model = kwargs.pop('nlp_model', None)
+    #print ("---dataset.py---\n",nlp_model)
     super(Dataset, self).__init__(*args, **kwargs)
     
     self._vocabs = vocabs
@@ -50,7 +51,7 @@ class Dataset(Configurable):
       self._nlp_model = nlp_model.from_configurable(self, name=self.name)
     else:
       self._nlp_model = None
-    
+    #print ("---dataset.py---after\n",nlp_model)
     with Bucketer.from_configurable(self, self.n_buckets, name='bucketer-%s'%self.name) as bucketer:
       splits = bucketer.compute_splits(len(sent) for sent in self.iterfiles())
       for i in xrange(len(splits)):
@@ -70,7 +71,7 @@ class Dataset(Configurable):
   #=============================================================
   def __call__(self, moving_params=None):
     """"""
-    
+    #print ("dataset.py(__call__):/n",self.vocabs)
     return self._nlp_model(self.vocabs, moving_params=moving_params)
   
   #=============================================================

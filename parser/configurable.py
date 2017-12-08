@@ -55,6 +55,7 @@ class Configurable(object):
       self._config = args[0]
     else:
       self._config = self._configure(*args, **kwargs)
+      #print ("Configurable, __init__: ", self.getfiles('train_files'))
     
     # We weren't passed in a configparser
     if not args and not is_eval:
@@ -106,7 +107,7 @@ class Configurable(object):
   @classmethod
   def from_configurable(cls, configurable, *args, **kwargs):
     """"""
-    
+    #print ("from_configurable, cls: %s, config: %s"%(cls, configurable)) 
     args += (configurable._config,)
     return cls(*args, **kwargs)
   

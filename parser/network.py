@@ -51,16 +51,22 @@ class Network(Configurable):
     # TODO make this more flexible, maybe specify it in config?
     temp_nlp_model = self.nlp_model.from_configurable(self)
     if temp_nlp_model.input_vocabs == ['tags']:
+      #print ("model")
       word_vocab = WordVocab.from_configurable(self)
       word_multivocab = Multivocab.from_configurable(self, [word_vocab], name=word_vocab.name)
       tag_vocab = TagVocab.from_configurable(self, initialize_zero=False)
     else:
+      print ("loading word vocab")
       word_vocab = WordVocab.from_configurable(self)
+      #print ("word_vocab len: ", word_vocab.counts)
+      print ("loading pretrained vocab")
       pretrained_vocab = PretrainedVocab.from_vocab(word_vocab)
+      print ("loading subtoken vocab")
       subtoken_vocab = self.subtoken_vocab.from_vocab(word_vocab)
       word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab, subtoken_vocab], name=word_vocab.name)
       #word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab], name=word_vocab.name)
       tag_vocab = TagVocab.from_configurable(self)
+    print ("loading dep vocab")
     dep_vocab = DepVocab.from_configurable(self)
     lemma_vocab = LemmaVocab.from_configurable(self)
     xtag_vocab = XTagVocab.from_configurable(self)

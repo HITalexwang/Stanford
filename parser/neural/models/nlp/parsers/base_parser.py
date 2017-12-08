@@ -45,14 +45,18 @@ class BaseParser(NN):
       self.vocabs = vocabs
     else:
       self.vocabs = {vocab.name: vocab for vocab in vocabs}
-    
+    #print ("base_parser.py(__call__):vocabs:",self.vocabs) 
     input_vocabs = [self.vocabs[name] for name in self.input_vocabs]
+    #print ("base_parser.py(__call__):input_vocabs:",input_vocabs)
+    #exit()
     #embed = tf.concat([vocab(moving_params=self.moving_params) for vocab in input_vocabs], 2)
     embed = self.embed_concat(input_vocabs)
     for vocab in self.vocabs.values():
       if vocab not in input_vocabs:
         vocab.generate_placeholder()
     placeholder = self.vocabs['words'].placeholder
+    #print ("base_parser.py(__call__):placeholder:",placeholder.get_shape())
+    #exit()
     if len(placeholder.get_shape().as_list()) == 3:
       placeholder = placeholder[:,:,0]
     self._tokens_to_keep = tf.to_float(tf.greater(placeholder, self.ROOT))
@@ -60,7 +64,8 @@ class BaseParser(NN):
     self._bucket_size = tf.shape(placeholder)[1]
     self._sequence_lengths = tf.reduce_sum(tf.to_int32(tf.greater(placeholder, self.PAD)), axis=1)
     self._n_tokens = tf.to_int32(tf.reduce_sum(self.tokens_to_keep))
-    
+    #print ("_tok_to_keep:",self._tokens_to_keep,"batch:",self._batch_size,"bucket:",self._bucket_size,"seq_len:",self._sequence_lengths,"tokens:",self._n_tokens)
+    #exit()
     top_recur = embed
     for i in xrange(self.n_layers):
       with tf.variable_scope('RNN%d' % i):

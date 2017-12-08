@@ -48,8 +48,9 @@ class Bucketer(Configurable):
   #=============================================================
   def compute_splits(self, data, plot=True):
     """"""
-    
+    #print ("---bucketer---",data)
     len2cnt = Counter(data)
+    #print (len2cnt)
     
     # Error checking
     if len(len2cnt) < self.k:

@@ -42,7 +42,6 @@ with codecs.open('config/defaults.cfg') as f:
     match = section_regex.match(line)
     if match:
       section_names.add(match.group(1).lower().replace(' ', '_'))
-
 #===============================================================
 # Train
 #---------------------------------------------------------------
@@ -56,10 +55,13 @@ def train(save_dir, **kwargs):
       if os.path.isfile(os.path.join(save_dir, 'config.cfg')):
         os.remove(os.path.join(save_dir, 'config.cfg'))
   except KeyboardInterrupt:
-    print()
     sys.exit(0)
   
+  #print (kwargs)
+  #print ("train files:",kwargs['train_files'])
+  print ("initializing")
   network = Network(**kwargs)
+  print ("initialized")
   network.train(load=load)
   return
 #---------------------------------------------------------------

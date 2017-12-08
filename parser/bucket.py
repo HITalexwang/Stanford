@@ -48,7 +48,8 @@ class Bucket(Configurable):
   #=============================================================
   def __call__(self, vocab, keep_prob=None, moving_params=None):
     """"""
-    
+    #print ("bucket.py(__call__):self.embed_model{},vocab:{},keep:{}".format(self.embed_model,vocab.name ,keep_prob))
+    #exit()
     return self.embed_model(vocab, keep_prob=keep_prob, moving_params=moving_params)
   
   #=============================================================

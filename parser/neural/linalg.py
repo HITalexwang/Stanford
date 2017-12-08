@@ -45,6 +45,7 @@ def linear(inputs, output_size, n_splits=1, add_bias=True, initializer=None, mov
     inputs = [inputs]
   n_dims = len(inputs[0].get_shape().as_list())
   all_inputs = tf.concat(inputs, n_dims-1)
+  #all_inputs = tf.concat(n_dims-1, inputs)
   input_size = all_inputs.get_shape().as_list()[-1]
   
   # Prepare the output

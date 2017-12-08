@@ -77,6 +77,9 @@ class NN(Configurable):
     for vocab in vocabs:
       if vocab.name in embed_dict:
         embedding = embed_dict[vocab.name]
+        #print ("nn.py(embed_concat):embedding:",embedding)
+        #print ("drop_masks[i]:",drop_masks[i]," scale_mask:",scale_mask)
+        #exit()
         if self.moving_params is None:
           embedding *= drop_masks[i]*scale_mask
         embeddings.append(embedding)
@@ -84,9 +87,9 @@ class NN(Configurable):
     return tf.concat(embeddings, 2)
   
   #=============================================================
-  def linear(self, inputs, output_size, keep_prob=None, n_splits=1, add_bias=True, initializer=tf.zeros_initializer()):
+  def linear(self, inputs, output_size, keep_prob=None, n_splits=1, add_bias=True, initializer=tf.zeros_initializer):
     """"""
-    
+    #print ("nn.py,linear,keep:{}".format(keep_prob))
     if isinstance(inputs, (list, tuple)):
       n_dims = len(inputs[0].get_shape().as_list())
       inputs = tf.concat(inputs, n_dims-1)
@@ -117,9 +120,9 @@ class NN(Configurable):
     return lin
   
   #=============================================================
-  def bilinear(self, inputs1, inputs2, output_size, keep_prob=None, n_splits=1, add_bias1=True, add_bias2=True, initializer=tf.zeros_initializer()):
+  def bilinear(self, inputs1, inputs2, output_size, keep_prob=None, n_splits=1, add_bias1=True, add_bias2=True, initializer=tf.zeros_initializer):
     """"""
-    
+    #print ("nn.py,bilinear,keep:{}".format(keep_prob))
     if isinstance(inputs1, (list, tuple)):
       n_dims1 = len(inputs1[0].get_shape().as_list())
       inputs1 = tf.concat(inputs1, n_dims-1)
@@ -283,7 +286,8 @@ class NN(Configurable):
     else:
       ff_keep_prob = 1
       recur_keep_prob = 1
-    
+    #print ("nn.py(RNN):cell:",cell,"self.rnn_func:",self.rnn_func)
+    #exit() 
     top_recur, end_state = self.rnn_func(cell, inputs, self.sequence_lengths,
                                  ff_keep_prob=ff_keep_prob,
                                  recur_keep_prob=recur_keep_prob)

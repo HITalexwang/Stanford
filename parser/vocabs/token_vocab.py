@@ -39,11 +39,11 @@ class TokenVocab(BaseVocab):
   #=============================================================
   def __init__(self, *args, **kwargs):
     """"""
-    
+     
     recount = kwargs.pop('recount', False)
     initialize_zero = kwargs.pop('initialize_zero', True)
     super(TokenVocab, self).__init__(*args, **kwargs)
-    
+    #print ("TokenVocab, __init__, recount:%s, self.filename:%s"%(recount, self.filename))
     if recount:
       self.count()
     else:
@@ -63,12 +63,13 @@ class TokenVocab(BaseVocab):
   
   #=============================================================
   def count(self, conll_files=None):
-    """"""
-    
+    """""" 
+    #print ("TokenVocab, count")
     if conll_files is None:
       conll_files = self.train_files
-    
+    #print ("token_vocab, count, self.train_files: ", self.train_files)
     for conll_file in conll_files:
+      #print ("token_vocab count : %s"%(conll_file))
       with codecs.open(conll_file, encoding='utf-8', errors='ignore') as f:
         for line_num, line in enumerate(f):
           try:
@@ -123,7 +124,7 @@ class TokenVocab(BaseVocab):
   #=============================================================
   def fit_to_zipf(self, plot=True):
     """"""
-    
+    print ("fit_to_zipf,len: %d" % (len(self.counts))) 
     zipf = Zipf.from_configurable(self, self.counts, name='zipf-%s'%self.name)
     if plot:
       zipf.plot()
