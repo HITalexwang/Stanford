@@ -123,6 +123,8 @@ class SubtokenVocab(TokenVocab):
     """"""
     
     self._tok2idx = {}
+    # {"apple":[12,6,6,2,8],"banana":[...]}
+    # the index of each char in a word
     tok2idxs = {token: self.subtoken_indices(token) for token in self.token_vocab.counts}
     with Bucketer.from_configurable(self, self.n_buckets, name='bucketer-%s'%self.name) as bucketer:
       splits = bucketer.compute_splits(len(indices) for indices in tok2idxs.values())

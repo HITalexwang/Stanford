@@ -62,6 +62,7 @@ class Network(Configurable):
       print ("loading pretrained vocab")
       pretrained_vocab = PretrainedVocab.from_vocab(word_vocab)
       print ("loading subtoken vocab")
+      #self.subtoken_vocab here = CharVocab
       subtoken_vocab = self.subtoken_vocab.from_vocab(word_vocab)
       word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab, subtoken_vocab], name=word_vocab.name)
       #word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab], name=word_vocab.name)

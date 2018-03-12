@@ -75,7 +75,7 @@ class BaseParser(NN):
   #=============================================================
   def process_accumulators(self, accumulators, time=None):
     """"""
-    
+    # 'n_tokens', 'n_seqs', 'loss', 'n_rel_correct', 'n_arc_correct', 'n_correct', 'n_seqs_correct'
     n_tokens, n_seqs, loss, rel_corr, arc_corr, corr, seq_corr = accumulators
     acc_dict = {
       'Loss': loss,

@@ -39,7 +39,7 @@ class Dataset(Configurable):
   #=============================================================
   def __init__(self, vocabs, *args, **kwargs):
     """"""
-    
+    # nlp_model = Parser
     nlp_model = kwargs.pop('nlp_model', None)
     #print ("---dataset.py---\n",nlp_model)
     super(Dataset, self).__init__(*args, **kwargs)
@@ -72,6 +72,7 @@ class Dataset(Configurable):
   def __call__(self, moving_params=None):
     """"""
     #print ("dataset.py(__call__):/n",self.vocabs)
+    # Here nlp_model = Parser
     return self._nlp_model(self.vocabs, moving_params=moving_params)
   
   #=============================================================
