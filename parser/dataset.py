@@ -156,6 +156,9 @@ class Dataset(Configurable):
   def write_probs(self, sents, output_file, probs):
     return self._nlp_model.write_probs(sents, output_file, probs, self.multibucket.inv_idxs())
 
+  def write_probs_ensemble(self, sents, output_file, multi_probs):
+    return self._nlp_model.write_probs_ensemble(sents, output_file, multi_probs, self.multibucket.inv_idxs())
+
   def check(self, preds, sents, fileobj):
     return self._nlp_model.check(preds, sents, fileobj)
   

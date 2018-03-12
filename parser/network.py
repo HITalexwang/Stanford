@@ -279,6 +279,76 @@ class Network(Configurable):
     return
   
   #=============================================================
+  def ensemble(self, input_files, other_save_dirs, output_dir=None, output_file=None):
+    """"""
+    
+    if not isinstance(input_files, (tuple, list)):
+      input_files = [input_files]
+    if len(input_files) > 1 and output_file is not None:
+      raise ValueError('Cannot provide a value for --output_file when parsing multiple files')
+    self.add_file_vocabs(input_files)
+    
+    # load the model and prep the parse set
+    trainset = Trainset.from_configurable(self, self.vocabs, nlp_model=self.nlp_model)
+    with tf.variable_scope(self.name.title()):
+      train_tensors = trainset()
+    train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
+
+    saver = tf.train.Saver(self.save_vars, max_to_keep=1)
+    config_proto = tf.ConfigProto()
+    if self.per_process_gpu_memory_fraction == -1:
+      config_proto.gpu_options.allow_growth = True
+    else:
+      config_proto.gpu_options.per_process_gpu_memory_fraction = self.per_process_gpu_memory_fraction
+    with tf.Session(config=config_proto) as sess:
+      for var in self.non_save_vars:
+        sess.run(var.initializer)
+      
+      # Iterate through files and batches
+      for input_file in input_files:
+        parseset = Parseset.from_configurable(trainset, self.vocabs, parse_files=input_file, nlp_model=self.nlp_model)
+        with tf.variable_scope(self.name.title(), reuse=True):
+          parse_tensors = parseset(moving_params=self.optimizer)
+        parse_outputs = [parse_tensors[parse_key] for parse_key in parseset.parse_keys]
+
+        input_dir, input_file = os.path.split(input_file)
+        if output_dir is None and output_file is None:
+          output_dir = self.save_dir
+        if output_dir == input_dir and output_file is None:
+          output_path = os.path.join(input_dir, 'parsed-'+input_file)
+        elif output_file is None:
+          output_path = os.path.join(output_dir, input_file)
+        else:
+          output_path = output_file
+        
+        multi_probs = []
+        start_time = time.time()
+        probs = []
+        sents = []
+        saver.restore(sess, tf.train.latest_checkpoint(self.save_dir))
+
+        for feed_dict, tokens in parseset.iterbatches(shuffle=False):
+          probs.append(sess.run(parse_outputs, feed_dict=feed_dict))
+          sents.append(tokens)
+        multi_probs.append(probs)
+
+        for other_dir in other_save_dirs:
+          probs = []
+          sents = []
+          print("Loading from model ",other_dir)
+          saver.restore(sess, tf.train.latest_checkpoint(other_dir))
+          for feed_dict, tokens in parseset.iterbatches(shuffle=False):
+            probs.append(sess.run(parse_outputs, feed_dict=feed_dict))
+            sents.append(tokens)
+          multi_probs.append(probs)
+
+        #parseset.write_probs(sents, output_path, probs)
+        parseset.write_probs_ensemble(sents, output_path, multi_probs)
+    if self.verbose:
+      print(ctext('Parsing {0} file(s) took {1} seconds'.format(len(input_files), time.time()-start_time), 'bright_green'))
+    return
+
+  #=============================================================
   @property
   def vocabs(self):
     return self._vocabs

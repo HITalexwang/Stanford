@@ -99,6 +99,40 @@ for section_name in section_names:
 parse_parser.add_argument('--output_file')
 parse_parser.add_argument('--output_dir')
 
+#===============================================================
+# Ensemble
+#---------------------------------------------------------------
+def ensemble(save_dir, **kwargs):
+
+  #print("save_dir:",save_dir)
+  other_save_dirs = kwargs.pop('other_save_dirs', None)
+  if other_save_dirs is None:
+    raise ValueError('### \'--other_save_dirs\' must be provided for ensemble! ###')
+  #print("other_save_dirs",other_save_dirs)
+
+  kwargs['config_file'] = os.path.join(save_dir, 'config.cfg')
+  files = kwargs.pop('files')
+  output_file = kwargs.pop('output_file', None)
+  output_dir = kwargs.pop('output_dir', None)
+  if len(files) > 1 and output_file is not None:
+    raise ValueError('Cannot provide a value for --output_file when parsing multiple files')
+  kwargs['is_evaluation'] = True
+  #print("ensemble config:\nfiles:{}\noutput_file:{}\noutput_dir:{}\n".format(files, output_file, output_dir))
+  network = Network(**kwargs)
+  network.ensemble(files, other_save_dirs, output_file=output_file, output_dir=output_dir)
+  return
+#---------------------------------------------------------------
+
+ens_parser = subparsers.add_parser('ensemble')
+ens_parser.set_defaults(action=ensemble)
+ens_parser.add_argument('files', nargs='+')
+for section_name in section_names:
+  ens_parser.add_argument('--'+section_name, nargs='+')
+ens_parser.add_argument('--other_save_dirs', nargs='+')
+ens_parser.add_argument('--output_file')
+ens_parser.add_argument('--output_dir')
+
+
 #***************************************************************
 # Parse the arguments
 kwargs = vars(argparser.parse_args())
@@ -113,3 +147,5 @@ if 'default' not in kwargs:
   kwargs['default'] = {}
 kwargs['default']['save_dir'] = save_dir
 action(save_dir, **kwargs)  
+
+

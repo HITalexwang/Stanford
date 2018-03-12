@@ -172,6 +172,56 @@ class BaseParser(NN):
     return
   
   #=============================================================
+  def write_probs_ensemble(self, sents, output_file, multi_probs, inv_idxs):
+    """"""
+    
+    #parse_algorithm = self.parse_algorithm
+    multi_arc_probs = []
+    multi_rel_probs = []
+    multi_tokens_to_keep = []
+    for probs in multi_probs:
+    	# Turns list of tuples of tensors into list of matrices
+    	multi_arc_probs.append([arc_prob for batch in probs for arc_prob in batch[0]])
+    	multi_rel_probs.append([rel_prob for batch in probs for rel_prob in batch[1]])
+    	multi_tokens_to_keep.append([weight for batch in probs for weight in batch[2]])
+    tokens = [sent for batch in sents for sent in batch]
+    
+    with codecs.open(output_file, 'w', encoding='utf-8', errors='ignore') as f:
+      j = 0
+      for i in inv_idxs:
+        #sent, arc_prob, rel_prob, weights = tokens[i], arc_probs[i], rel_probs[i], tokens_to_keep[i]
+        weights = multi_tokens_to_keep[0][i]
+        sent = tokens[i]
+        sent = zip(*sent)
+        sequence_length = int(np.sum(weights))+1
+        arc_prob = multi_arc_probs[0][i][:sequence_length][:,:sequence_length]
+        for n in range(1,len(multi_arc_probs)):
+        	#print("adding for arc sent {},shape:{}".format(i,arc_prob.shape))
+        	arc_prob += multi_arc_probs[n][i][:sequence_length][:,:sequence_length]
+
+        #arc_preds = np.argmax(arc_prob, axis=1)
+        arc_preds = nonprojective(arc_prob)
+        rel_prob = multi_rel_probs[0][i]
+        for n in range(1, len(multi_rel_probs)):
+        	#print ("adding for rel sent {},shape:{}".format(i,rel_prob.shape))
+        	rel_prob += multi_rel_probs[n][i]
+        arc_preds_one_hot = np.zeros([rel_prob.shape[0], rel_prob.shape[2]])
+        arc_preds_one_hot[np.arange(len(arc_preds)), arc_preds] = 1.
+        rel_preds = np.argmax(np.einsum('nrb,nb->nr', rel_prob, arc_preds_one_hot), axis=1)
+        for token, arc_pred, rel_pred, weight in zip(sent, arc_preds[1:], rel_preds[1:], weights[1:]):
+          token = list(token)
+          token.insert(5, '_')
+          token.append('_')
+          token.append('_')
+          token[6] = self.vocabs['heads'][arc_pred]
+          token[7] = self.vocabs['rels'][rel_pred]
+          f.write('\t'.join(token)+'\n')
+        j += 1
+        if j < len(inv_idxs):
+          f.write('\n')
+    return
+
+  #=============================================================
   @property
   def train_keys(self):
     return ('n_tokens', 'n_seqs', 'loss', 'n_rel_correct', 'n_arc_correct', 'n_correct', 'n_seqs_correct')
