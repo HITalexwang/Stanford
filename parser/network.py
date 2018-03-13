@@ -171,14 +171,14 @@ class Network(Configurable):
             current_acc = validset.update_history(self.history['valid'], valid_accumulators)
             # print
             if verbose:
-              print(ctext('{0:6d}'.format(int(total_train_iters)), 'bold')+')') 
+              print('{0:6d}'.format(int(total_train_iters))+')') 
               trainset.print_accuracy(train_accumulators, train_time)
               validset.print_accuracy(valid_accumulators, valid_time)
             train_accumulators = np.zeros(len(train_outputs))
             train_time = 0
             if current_acc > best_acc:
               if verbose:
-                print(ctext('Saving model...', 'bright_yellow'))
+                print('Saving model...')
               best_acc = current_acc
               n_iters_since_improvement = 0
               saver.save(sess, os.path.join(self.save_dir, self.name.lower()),
@@ -220,7 +220,7 @@ class Network(Configurable):
           sents.append(tokens)
         parseset.write_probs(sents, os.path.join(output_dir, output_file), probs)
     if self.verbose:
-      print(ctext('Parsing {0} file(s) took {1} seconds'.format(len(input_files), time.time()-start_time), 'bright_green'))
+      print('Parsing {0} file(s) took {1} seconds'.format(len(input_files), time.time()-start_time))
     return
   
   #=============================================================
@@ -275,7 +275,7 @@ class Network(Configurable):
           sents.append(tokens)
         parseset.write_probs(sents, output_path, probs)
     if self.verbose:
-      print(ctext('Parsing {0} file(s) took {1} seconds'.format(len(input_files), time.time()-start_time), 'bright_green'))
+      print('Parsing {0} file(s) took {1} seconds'.format(len(input_files), time.time()-start_time))
     return
   
   #=============================================================
@@ -345,7 +345,7 @@ class Network(Configurable):
         #parseset.write_probs(sents, output_path, probs)
         parseset.write_probs_ensemble(sents, output_path, multi_probs, sum_type)
     if self.verbose:
-      print(ctext('Parsing {0} file(s) took {1} seconds'.format(len(input_files), time.time()-start_time), 'bright_green'))
+      print('Parsing {0} file(s) took {1} seconds'.format(len(input_files), time.time()-start_time))
     return
 
   #=============================================================

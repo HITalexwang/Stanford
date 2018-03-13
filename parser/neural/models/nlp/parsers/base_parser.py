@@ -106,13 +106,13 @@ class BaseParser(NN):
     
     acc_dict = self.process_accumulators(accumulators, time=time)
     strings = []
-    strings.append(color_pattern('Loss:', '{Loss:7.3f}', 'bright_red'))
-    strings.append(color_pattern('LS:', '{LS:5.2f}%', 'bright_cyan'))
-    strings.append(color_pattern('UAS:', '{UAS:5.2f}%', 'bright_cyan'))
-    strings.append(color_pattern('LAS:', '{LAS:5.2f}%', 'bright_cyan'))
-    strings.append(color_pattern('SS:', '{SS:5.2f}%', 'bright_green'))
-    strings.append(color_pattern('Speed:', '{Seq_rate:6.1f} seqs/sec', 'bright_magenta'))
-    string = ctext('{0}  ', 'bold') + ' | '.join(strings)
+    strings.append('Loss: {Loss:7.3f}')
+    strings.append('LS: {LS:5.2f}%')
+    strings.append('UAS: {UAS:5.2f}%')
+    strings.append('LAS: {LAS:5.2f}%')
+    strings.append('SS: {SS:5.2f}%')
+    strings.append('Speed: {Seq_rate:6.1f} seqs/sec')
+    string = '{0}  ' + ' | '.join(strings)
     print(string.format(prefix, **acc_dict))
     return
   
