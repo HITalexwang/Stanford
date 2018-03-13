@@ -279,7 +279,7 @@ class Network(Configurable):
     return
   
   #=============================================================
-  def ensemble(self, input_files, other_save_dirs, output_dir=None, output_file=None):
+  def ensemble(self, input_files, other_save_dirs, sum_type="prob", output_dir=None, output_file=None):
     """"""
     
     if not isinstance(input_files, (tuple, list)):
@@ -309,7 +309,7 @@ class Network(Configurable):
         parseset = Parseset.from_configurable(trainset, self.vocabs, parse_files=input_file, nlp_model=self.nlp_model)
         with tf.variable_scope(self.name.title(), reuse=True):
           parse_tensors = parseset(moving_params=self.optimizer)
-        parse_outputs = [parse_tensors[parse_key] for parse_key in parseset.parse_keys]
+        ensemble_outputs = [parse_tensors[ensemble_key] for ensemble_key in parseset.ensemble_keys]
 
         input_dir, input_file = os.path.split(input_file)
         if output_dir is None and output_file is None:
@@ -328,7 +328,7 @@ class Network(Configurable):
         saver.restore(sess, tf.train.latest_checkpoint(self.save_dir))
 
         for feed_dict, tokens in parseset.iterbatches(shuffle=False):
-          probs.append(sess.run(parse_outputs, feed_dict=feed_dict))
+          probs.append(sess.run(ensemble_outputs, feed_dict=feed_dict))
           sents.append(tokens)
         multi_probs.append(probs)
 
@@ -338,12 +338,12 @@ class Network(Configurable):
           print("Loading from model ",other_dir)
           saver.restore(sess, tf.train.latest_checkpoint(other_dir))
           for feed_dict, tokens in parseset.iterbatches(shuffle=False):
-            probs.append(sess.run(parse_outputs, feed_dict=feed_dict))
+            probs.append(sess.run(ensemble_outputs, feed_dict=feed_dict))
             sents.append(tokens)
           multi_probs.append(probs)
 
         #parseset.write_probs(sents, output_path, probs)
-        parseset.write_probs_ensemble(sents, output_path, multi_probs)
+        parseset.write_probs_ensemble(sents, output_path, multi_probs, sum_type)
     if self.verbose:
       print(ctext('Parsing {0} file(s) took {1} seconds'.format(len(input_files), time.time()-start_time), 'bright_green'))
     return

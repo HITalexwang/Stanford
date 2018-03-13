@@ -172,18 +172,25 @@ class BaseParser(NN):
     return
   
   #=============================================================
-  def write_probs_ensemble(self, sents, output_file, multi_probs, inv_idxs):
+  def write_probs_ensemble(self, sents, output_file, multi_probs, inv_idxs, sum_type):
     """"""
-    
+    assert(sum_type in ["prob", "score"])
     #parse_algorithm = self.parse_algorithm
     multi_arc_probs = []
     multi_rel_probs = []
     multi_tokens_to_keep = []
-    for probs in multi_probs:
-    	# Turns list of tuples of tensors into list of matrices
-    	multi_arc_probs.append([arc_prob for batch in probs for arc_prob in batch[0]])
-    	multi_rel_probs.append([rel_prob for batch in probs for rel_prob in batch[1]])
-    	multi_tokens_to_keep.append([weight for batch in probs for weight in batch[2]])
+    if (sum_type == "prob"):
+    	for probs in multi_probs:
+    		# Turns list of tuples of tensors into list of matrices
+    		multi_arc_probs.append([arc_prob for batch in probs for arc_prob in batch[0]])
+    		multi_rel_probs.append([rel_prob for batch in probs for rel_prob in batch[1]])
+    		multi_tokens_to_keep.append([weight for batch in probs for weight in batch[2]])
+    elif (sum_type == "score"):
+    	for probs in multi_probs:
+    		# Turns list of tuples of tensors into list of matrices
+    		multi_arc_probs.append([arc_prob for batch in probs for arc_prob in batch[3]])
+    		multi_rel_probs.append([rel_prob for batch in probs for rel_prob in batch[4]])
+    		multi_tokens_to_keep.append([weight for batch in probs for weight in batch[2]])
     tokens = [sent for batch in sents for sent in batch]
     
     with codecs.open(output_file, 'w', encoding='utf-8', errors='ignore') as f:
@@ -200,11 +207,15 @@ class BaseParser(NN):
         	arc_prob += multi_arc_probs[n][i][:sequence_length][:,:sequence_length]
 
         #arc_preds = np.argmax(arc_prob, axis=1)
+        if (sum_type == "score"):
+        	# softmax axis = 1
+        	arc_prob = np.exp(arc_prob) / np.sum(np.exp(arc_prob), axis = 1).reshape(arc_prob.shape[0],1)
         arc_preds = nonprojective(arc_prob)
         rel_prob = multi_rel_probs[0][i]
         for n in range(1, len(multi_rel_probs)):
         	#print ("adding for rel sent {},shape:{}".format(i,rel_prob.shape))
         	rel_prob += multi_rel_probs[n][i]
+
         arc_preds_one_hot = np.zeros([rel_prob.shape[0], rel_prob.shape[2]])
         arc_preds_one_hot[np.arange(len(arc_preds)), arc_preds] = 1.
         rel_preds = np.argmax(np.einsum('nrb,nb->nr', rel_prob, arc_preds_one_hot), axis=1)
@@ -235,3 +246,8 @@ class BaseParser(NN):
   @property
   def parse_keys(self):
     return ('arc_probs', 'rel_probs', 'tokens_to_keep')
+
+  #=============================================================
+  @property
+  def ensemble_keys(self):
+    return ('arc_probs', 'rel_probs', 'tokens_to_keep', 'arc_logits', 'rel_logits')

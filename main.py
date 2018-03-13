@@ -109,6 +109,12 @@ def ensemble(save_dir, **kwargs):
   if other_save_dirs is None:
     raise ValueError('### \'--other_save_dirs\' must be provided for ensemble! ###')
   #print("other_save_dirs",other_save_dirs)
+  sum_type = kwargs.pop('sum_type', None)
+  if sum_type is None:
+    sum_type = 'prob'
+  if sum_type not in ['prob', 'score']:
+    raise ValueError('### \'--sum_type\' is not \'prob\' or \'score\'! ###')
+  print ('sum_type:', sum_type)
 
   kwargs['config_file'] = os.path.join(save_dir, 'config.cfg')
   files = kwargs.pop('files')
@@ -119,7 +125,7 @@ def ensemble(save_dir, **kwargs):
   kwargs['is_evaluation'] = True
   #print("ensemble config:\nfiles:{}\noutput_file:{}\noutput_dir:{}\n".format(files, output_file, output_dir))
   network = Network(**kwargs)
-  network.ensemble(files, other_save_dirs, output_file=output_file, output_dir=output_dir)
+  network.ensemble(files, other_save_dirs, sum_type, output_file=output_file, output_dir=output_dir)
   return
 #---------------------------------------------------------------
 
@@ -129,6 +135,7 @@ ens_parser.add_argument('files', nargs='+')
 for section_name in section_names:
   ens_parser.add_argument('--'+section_name, nargs='+')
 ens_parser.add_argument('--other_save_dirs', nargs='+')
+ens_parser.add_argument('--sum_type')
 ens_parser.add_argument('--output_file')
 ens_parser.add_argument('--output_dir')
 

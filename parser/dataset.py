@@ -156,8 +156,8 @@ class Dataset(Configurable):
   def write_probs(self, sents, output_file, probs):
     return self._nlp_model.write_probs(sents, output_file, probs, self.multibucket.inv_idxs())
 
-  def write_probs_ensemble(self, sents, output_file, multi_probs):
-    return self._nlp_model.write_probs_ensemble(sents, output_file, multi_probs, self.multibucket.inv_idxs())
+  def write_probs_ensemble(self, sents, output_file, multi_probs, sum_type):
+    return self._nlp_model.write_probs_ensemble(sents, output_file, multi_probs, self.multibucket.inv_idxs(), sum_type)
 
   def check(self, preds, sents, fileobj):
     return self._nlp_model.check(preds, sents, fileobj)
@@ -184,6 +184,9 @@ class Dataset(Configurable):
   @property
   def parse_keys(self):
     return self._nlp_model.parse_keys
+  @property
+  def ensemble_keys(self):
+    return self._nlp_model.ensemble_keys
   
   #=============================================================
   def __len__(self):
