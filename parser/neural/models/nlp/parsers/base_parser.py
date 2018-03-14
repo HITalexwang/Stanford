@@ -209,7 +209,7 @@ class BaseParser(NN):
         #arc_preds = np.argmax(arc_prob, axis=1)
         if (sum_type == "score"):
         	# softmax axis = 1
-        	arc_prob = np.exp(arc_prob - np.max(arc_prob))
+        	arc_prob = np.exp(arc_prob - np.max(arc_prob, axis = 1).reshape(arc_prob.shape[0],1))
         	arc_prob = arc_prob / np.sum(arc_prob, axis = 1).reshape(arc_prob.shape[0],1)
         arc_preds = nonprojective(arc_prob)
         rel_prob = multi_rel_probs[0][i]
