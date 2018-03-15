@@ -78,19 +78,39 @@ class Dataset(Configurable):
   #=============================================================
   def iterfiles(self):
     """"""
-    
-    for data_file in self.data_files:
-      with codecs.open(data_file, encoding='utf-8', errors='ignore') as f:
-        buff = []
-        for line in f:
-          line = line.strip()
-          if line and not line.startswith('#'):
-            if not re.match('[0-9]+[-.][0-9]+', line):
-              buff.append(line.split('\t'))
-          elif buff:
-            yield buff
-            buff = []
-        yield buff
+    if self.name == "parseset":
+      self._merge_lines = []
+      for data_file in self.data_files:
+        with codecs.open(data_file, encoding='utf-8', errors='ignore') as f:
+          buff = []
+          merge_line = {}
+          for line in f:
+            line = line.strip()
+            if line and not line.startswith('#'):
+              if re.match('[0-9]+-[0-9]+', line):
+                merge_line[int(line.split('\t')[0].split('-')[0])] = line
+              if not re.match('[0-9]+[-.][0-9]+', line):
+                buff.append(line.split('\t'))
+            elif buff:
+              self.merge_lines.append(merge_line)
+              merge_line = {}
+              yield buff
+              buff = []
+          self.merge_lines.append(merge_line)
+          yield buff
+    else:
+      for data_file in self.data_files:
+        with codecs.open(data_file, encoding='utf-8', errors='ignore') as f:
+          buff = []
+          for line in f:
+            line = line.strip()
+            if line and not line.startswith('#'):
+              if not re.match('[0-9]+[-.][0-9]+', line):
+                buff.append(line.split('\t'))
+            elif buff:
+              yield buff
+              buff = []
+          yield buff
   
   #=============================================================
   def iterbatches(self, shuffle=True, return_check=False):
@@ -154,7 +174,7 @@ class Dataset(Configurable):
     return self._nlp_model.print_accuracy(accumulators, time, prefix=self.PREFIX.title())
   
   def write_probs(self, sents, output_file, probs):
-    return self._nlp_model.write_probs(sents, output_file, probs, self.multibucket.inv_idxs())
+    return self._nlp_model.write_probs(sents, output_file, probs, self.multibucket.inv_idxs(), self.merge_lines)
 
   def write_probs_ensemble(self, sents, output_file, multi_probs, sum_type):
     return self._nlp_model.write_probs_ensemble(sents, output_file, multi_probs, self.multibucket.inv_idxs(), sum_type)
@@ -187,6 +207,11 @@ class Dataset(Configurable):
   @property
   def ensemble_keys(self):
     return self._nlp_model.ensemble_keys
+  # for merge lines like 1-2 it's _ _ ...
+  @property
+  def merge_lines(self):
+    return self._merge_lines
+  
   
   #=============================================================
   def __len__(self):
