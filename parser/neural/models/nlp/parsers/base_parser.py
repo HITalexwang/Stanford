@@ -176,7 +176,7 @@ class BaseParser(NN):
     return
   
   #=============================================================
-  def write_probs_ensemble(self, sents, output_file, multi_probs, inv_idxs, sum_type):
+  def write_probs_ensemble(self, sents, output_file, multi_probs, inv_idxs, sum_type, merge_lines):
     """"""
     assert(sum_type in ["prob", "score"])
     #parse_algorithm = self.parse_algorithm
@@ -224,8 +224,12 @@ class BaseParser(NN):
         arc_preds_one_hot = np.zeros([rel_prob.shape[0], rel_prob.shape[2]])
         arc_preds_one_hot[np.arange(len(arc_preds)), arc_preds] = 1.
         rel_preds = np.argmax(np.einsum('nrb,nb->nr', rel_prob, arc_preds_one_hot), axis=1)
+        merge_line = merge_lines[j]
         for token, arc_pred, rel_pred, weight in zip(sent, arc_preds[1:], rel_preds[1:], weights[1:]):
           token = list(token)
+          # add the merge line
+          if (int(token[0]) in merge_line.keys()):
+          	f.write(merge_line[int(token[0])]+'\n')
           token.insert(5, '_')
           token.append('_')
           token.append('_')
