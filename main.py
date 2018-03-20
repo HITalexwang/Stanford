@@ -115,6 +115,12 @@ def ensemble(save_dir, **kwargs):
   if sum_type not in ['prob', 'score']:
     raise ValueError('### \'--sum_type\' is not \'prob\' or \'score\'! ###')
   print ('sum_type:', sum_type)
+  sum_weights = kwargs.pop('sum_weights', None)
+  if sum_weights is not None:
+  	sum_weights = [float(w) for w in sum_weights]
+  	for w in sum_weights:
+  		assert(w > 0 and w <= 1.0)
+  	print ('sum_weights:', sum_weights)
 
   kwargs['config_file'] = os.path.join(save_dir, 'config.cfg')
   files = kwargs.pop('files')
@@ -125,7 +131,7 @@ def ensemble(save_dir, **kwargs):
   kwargs['is_evaluation'] = True
   #print("ensemble config:\nfiles:{}\noutput_file:{}\noutput_dir:{}\n".format(files, output_file, output_dir))
   network = Network(**kwargs)
-  network.ensemble(files, other_save_dirs, sum_type, output_file=output_file, output_dir=output_dir)
+  network.ensemble(files, other_save_dirs, sum_type, sum_weights=sum_weights, output_file=output_file, output_dir=output_dir)
   return
 #---------------------------------------------------------------
 
@@ -136,6 +142,7 @@ for section_name in section_names:
   ens_parser.add_argument('--'+section_name, nargs='+')
 ens_parser.add_argument('--other_save_dirs', nargs='+')
 ens_parser.add_argument('--sum_type')
+ens_parser.add_argument('--sum_weights', nargs='+')
 ens_parser.add_argument('--output_file')
 ens_parser.add_argument('--output_dir')
 

@@ -176,7 +176,7 @@ class BaseParser(NN):
     return
   
   #=============================================================
-  def write_probs_ensemble(self, sents, output_file, multi_probs, inv_idxs, sum_type, merge_lines):
+  def write_probs_ensemble(self, sents, output_file, multi_probs, inv_idxs, sum_type, merge_lines, sum_weights=None):
     """"""
     assert(sum_type in ["prob", "score"])
     #parse_algorithm = self.parse_algorithm
@@ -197,6 +197,8 @@ class BaseParser(NN):
     		multi_tokens_to_keep.append([weight for batch in probs for weight in batch[2]])
     tokens = [sent for batch in sents for sent in batch]
     
+    if sum_weights is None:
+    	sum_weights = [1.0] * len(multi_arc_probs)
     with codecs.open(output_file, 'w', encoding='utf-8', errors='ignore') as f:
       j = 0
       for i in inv_idxs:
@@ -208,7 +210,7 @@ class BaseParser(NN):
         arc_prob = multi_arc_probs[0][i][:sequence_length][:,:sequence_length]
         for n in range(1,len(multi_arc_probs)):
         	#print("adding for arc sent {},shape:{}".format(i,arc_prob.shape))
-        	arc_prob += multi_arc_probs[n][i][:sequence_length][:,:sequence_length]
+        	arc_prob += sum_weights[n] * multi_arc_probs[n][i][:sequence_length][:,:sequence_length]
 
         #arc_preds = np.argmax(arc_prob, axis=1)
         if (sum_type == "score"):
@@ -219,7 +221,7 @@ class BaseParser(NN):
         rel_prob = multi_rel_probs[0][i]
         for n in range(1, len(multi_rel_probs)):
         	#print ("adding for rel sent {},shape:{}".format(i,rel_prob.shape))
-        	rel_prob += multi_rel_probs[n][i]
+        	rel_prob += sum_weights[n] * multi_rel_probs[n][i]
 
         arc_preds_one_hot = np.zeros([rel_prob.shape[0], rel_prob.shape[2]])
         arc_preds_one_hot[np.arange(len(arc_preds)), arc_preds] = 1.

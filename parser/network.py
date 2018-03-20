@@ -279,7 +279,7 @@ class Network(Configurable):
     return
   
   #=============================================================
-  def ensemble(self, input_files, other_save_dirs, sum_type="prob", output_dir=None, output_file=None):
+  def ensemble(self, input_files, other_save_dirs, sum_type="prob", sum_weights=None, output_dir=None, output_file=None):
     """"""
     
     if not isinstance(input_files, (tuple, list)):
@@ -343,7 +343,7 @@ class Network(Configurable):
           multi_probs.append(probs)
 
         #parseset.write_probs(sents, output_path, probs)
-        parseset.write_probs_ensemble(sents, output_path, multi_probs, sum_type)
+        parseset.write_probs_ensemble(sents, output_path, multi_probs, sum_type, sum_weights=sum_weights)
     if self.verbose:
       print('Parsing {0} file(s) took {1} seconds'.format(len(input_files), time.time()-start_time))
     return
