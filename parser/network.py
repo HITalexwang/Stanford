@@ -360,10 +360,10 @@ class Network(Configurable):
     return self._optimizer
   @property
   def save_vars(self):
-    return filter(lambda x: u'Pretrained/Embeddings:0' != x.name, tf.global_variables())
+    return filter(lambda x: u'Pretrained/Embeddings:0' != x.name and u'Elmo/Embeddings:0' != x.name, tf.global_variables())
   @property
   def non_save_vars(self):
-    return filter(lambda x: u'Pretrained/Embeddings:0' == x.name, tf.global_variables())
+    return filter(lambda x: u'Pretrained/Embeddings:0' == x.name or u'Elmo/Embeddings:0' == x.name, tf.global_variables())
   @property
   def global_step(self):
     return self._global_step
