@@ -56,18 +56,23 @@ class Network(Configurable):
       word_multivocab = Multivocab.from_configurable(self, [word_vocab], name=word_vocab.name)
       tag_vocab = TagVocab.from_configurable(self, initialize_zero=False)
     else:
-      print ("loading word vocab")
+      print ("### Loading word vocab ###")
       word_vocab = WordVocab.from_configurable(self)
       #print ("word_vocab len: ", word_vocab.counts)
-      print ("loading pretrained vocab")
+      print ("### Loading pretrained vocab ###")
       pretrained_vocab = PretrainedVocab.from_vocab(word_vocab)
-      print ("loading subtoken vocab")
+      print ("### Loading subtoken vocab ###")
       #self.subtoken_vocab here = CharVocab
       subtoken_vocab = self.subtoken_vocab.from_vocab(word_vocab)
+      #if (self.use_elmo == True):
+      #  print ("### Loading ELMo vocab ###")
+      #  elmo_vocab = ElmoVocab.from_vocab(word_vocab)
+      #  word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab, subtoken_vocab, elmo_vocab], name=word_vocab.name)
+      #else:
       word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab, subtoken_vocab], name=word_vocab.name)
       #word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab], name=word_vocab.name)
       tag_vocab = TagVocab.from_configurable(self)
-    print ("loading dep vocab")
+    print ("### Loading dep vocab ###")
     dep_vocab = DepVocab.from_configurable(self)
     lemma_vocab = LemmaVocab.from_configurable(self)
     xtag_vocab = XTagVocab.from_configurable(self)
@@ -98,13 +103,13 @@ class Network(Configurable):
     
     # prep the configurables
     self.add_file_vocabs(self.parse_files)
-    trainset = Trainset.from_configurable(self, self.vocabs, nlp_model=self.nlp_model)
+    trainset = Trainset.from_configurable(self, self.vocabs, True, nlp_model=self.nlp_model)
     with tf.variable_scope(self.name.title()):
       train_tensors = trainset()
     train = self.optimizer(tf.losses.get_total_loss())
     train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
     saver = tf.train.Saver(self.save_vars, max_to_keep=1)
-    validset = Parseset.from_configurable(self, self.vocabs, nlp_model=self.nlp_model)
+    validset = Parseset.from_configurable(self, self.vocabs, True, nlp_model=self.nlp_model)
     with tf.variable_scope(self.name.title(), reuse=True):
       valid_tensors = validset(moving_params=self.optimizer)
     valid_outputs = [valid_tensors[train_key] for train_key in validset.train_keys]
@@ -200,10 +205,11 @@ class Network(Configurable):
           continue
         break
       # Now parse the training and testing files
+      """
       input_files = self.train_files + self.parse_files
       saver.restore(sess, tf.train.latest_checkpoint(self.save_dir))
       for input_file in input_files:
-        parseset = Parseset.from_configurable(self, self.vocabs, parse_files=input_file, nlp_model=self.nlp_model)
+        parseset = Parseset.from_configurable(self, self.vocabs, True, parse_files=input_file, nlp_model=self.nlp_model)
         with tf.variable_scope(self.name.title(), reuse=True):
           parse_tensors = parseset(moving_params=self.optimizer)
         parse_outputs = [parse_tensors[parse_key] for parse_key in parseset.parse_keys]
@@ -219,6 +225,7 @@ class Network(Configurable):
           probs.append(sess.run(parse_outputs, feed_dict=feed_dict))
           sents.append(tokens)
         parseset.write_probs(sents, os.path.join(output_dir, output_file), probs)
+        """
     if self.verbose:
       print('Parsing {0} file(s) took {1} seconds'.format(len(input_files), time.time()-start_time))
     return
@@ -234,7 +241,7 @@ class Network(Configurable):
     self.add_file_vocabs(input_files)
     
     # load the model and prep the parse set
-    trainset = Trainset.from_configurable(self, self.vocabs, nlp_model=self.nlp_model)
+    trainset = Trainset.from_configurable(self, self.vocabs, False, nlp_model=self.nlp_model)
     with tf.variable_scope(self.name.title()):
       train_tensors = trainset()
     train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
@@ -252,7 +259,8 @@ class Network(Configurable):
       
       # Iterate through files and batches
       for input_file in input_files:
-        parseset = Parseset.from_configurable(trainset, self.vocabs, parse_files=input_file, nlp_model=self.nlp_model)
+        #parseset = Parseset.from_configurable(trainset, self.vocabs, parse_files=input_file, nlp_model=self.nlp_model)
+        parseset = Parseset.from_configurable(trainset, self.vocabs, True, parse_files=input_file, nlp_model=self.nlp_model)
         with tf.variable_scope(self.name.title(), reuse=True):
           parse_tensors = parseset(moving_params=self.optimizer)
         parse_outputs = [parse_tensors[parse_key] for parse_key in parseset.parse_keys]
@@ -289,7 +297,7 @@ class Network(Configurable):
     self.add_file_vocabs(input_files)
     
     # load the model and prep the parse set
-    trainset = Trainset.from_configurable(self, self.vocabs, nlp_model=self.nlp_model)
+    trainset = Trainset.from_configurable(self, self.vocabs, False, nlp_model=self.nlp_model)
     with tf.variable_scope(self.name.title()):
       train_tensors = trainset()
     train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
@@ -306,7 +314,7 @@ class Network(Configurable):
       
       # Iterate through files and batches
       for input_file in input_files:
-        parseset = Parseset.from_configurable(trainset, self.vocabs, parse_files=input_file, nlp_model=self.nlp_model)
+        parseset = Parseset.from_configurable(trainset, self.vocabs, True, parse_files=input_file, nlp_model=self.nlp_model)
         with tf.variable_scope(self.name.title(), reuse=True):
           parse_tensors = parseset(moving_params=self.optimizer)
         ensemble_outputs = [parse_tensors[ensemble_key] for ensemble_key in parseset.ensemble_keys]

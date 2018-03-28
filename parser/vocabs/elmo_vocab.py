@@ -106,6 +106,45 @@ class ElmoVocab(BaseVocab):
     return
   
   #=============================================================
+  def load_parse_set(self):
+    """"""
+    
+    embeddings = []
+    cur_idx = len(self.special_tokens)
+    max_rank = self.max_rank
+    sid = 0
+    wid = 0
+    if self.filename.endswith('.xz'):
+      open_func = lzma.open
+    else:
+      open_func = codecs.open
+    with open_func(self.filename, 'rb') as f:
+      reader = codecs.getreader('utf-8')(f, errors='ignore')
+      if self.skip_header == True:
+        reader.readline()
+      for line_num, line in enumerate(reader):
+        if (not max_rank) or line_num < max_rank:
+          line = line.rstrip().split(' ')
+          if len(line) > 1:
+            embeddings.append(np.array(line[1:], dtype=np.float32))
+            self[str(sid)+"-"+str(wid)] = cur_idx
+            wid += 1
+            cur_idx += 1
+          else:
+            sid += 1
+            wid = 0
+        else:
+          break
+    try:
+      embeddings = np.stack(embeddings)
+      embeddings = np.pad(embeddings, ( (len(self.special_tokens),0), (0,0) ), 'constant')
+      self.embeddings = np.stack(embeddings)
+    except:
+      shapes = set([embedding.shape for embedding in embeddings])
+      raise ValueError("Couldn't stack embeddings with shapes in %s" % shapes)
+    return
+
+  #=============================================================
   def count(self):
     """"""
     

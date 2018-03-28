@@ -37,7 +37,7 @@ class Dataset(Configurable):
   """"""
   
   #=============================================================
-  def __init__(self, vocabs, *args, **kwargs):
+  def __init__(self, vocabs,  load_file, *args, **kwargs):
     """"""
     # nlp_model = Parser
     nlp_model = kwargs.pop('nlp_model', None)
@@ -51,6 +51,11 @@ class Dataset(Configurable):
       self._nlp_model = nlp_model.from_configurable(self, name=self.name)
     else:
       self._nlp_model = None
+
+    if not load_file:
+      print ("### {} not load file! ###".format(self.name))
+      return
+
     #print ("---dataset.py---after\n",nlp_model)
     with Bucketer.from_configurable(self, self.n_buckets, name='bucketer-%s'%self.name) as bucketer:
       splits = bucketer.compute_splits(len(sent) for sent in self.iterfiles())
@@ -63,6 +68,8 @@ class Dataset(Configurable):
         tokens = [line[vocab.conll_idx] for line in sent]
         idxs = [vocab.ROOT] + [vocab.index(token) for token in tokens]
         multibucket.add(idxs, tokens)
+        # here the first one is multivocab
+      #multibucket, vocab = self.iteritems()[0]
     for multibucket in self:
       multibucket.close()
     self._multibucket = Multibucket.from_dataset(self)

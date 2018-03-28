@@ -361,6 +361,9 @@ class Configurable(object):
   @property
   def per_process_gpu_memory_fraction(self):
     return self.getfloat('per_process_gpu_memory_fraction')
+  @property
+  def use_elmo(self):
+    return self.getboolean('use_elmo')
   
   #=============================================================
   # [Zipf / Bucketer]

@@ -1,5 +1,6 @@
 from index_vocab import IndexVocab, DepVocab, HeadVocab
 from pretrained_vocab import PretrainedVocab
+from elmo_vocab import ElmoVocab
 from token_vocab import TokenVocab, WordVocab, LemmaVocab, TagVocab, XTagVocab, RelVocab
 from subtoken_vocab import SubtokenVocab, CharVocab
 from ngram_vocab import NgramVocab
@@ -10,6 +11,7 @@ __all__ = [
   'DepVocab',
   'HeadVocab',
   'PretrainedVocab',
+  'ElmoVocab',
   'WordVocab',
   'LemmaVocab',
   'TagVocab',
