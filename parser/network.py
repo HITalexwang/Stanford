@@ -64,12 +64,12 @@ class Network(Configurable):
       print ("### Loading subtoken vocab ###")
       #self.subtoken_vocab here = CharVocab
       subtoken_vocab = self.subtoken_vocab.from_vocab(word_vocab)
-      #if (self.use_elmo == True):
-      #  print ("### Loading ELMo vocab ###")
-      #  elmo_vocab = ElmoVocab.from_vocab(word_vocab)
-      #  word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab, subtoken_vocab, elmo_vocab], name=word_vocab.name)
-      #else:
-      word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab, subtoken_vocab], name=word_vocab.name)
+      if (self.use_elmo == True):
+        print ("### Loading ELMo vocab ###")
+        elmo_vocab = ElmoVocab.from_vocab(word_vocab)
+        word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab, elmo_vocab, subtoken_vocab], name=word_vocab.name)
+      else:
+        word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab, subtoken_vocab], name=word_vocab.name)
       #word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab], name=word_vocab.name)
       tag_vocab = TagVocab.from_configurable(self)
     print ("### Loading dep vocab ###")

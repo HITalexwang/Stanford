@@ -186,6 +186,9 @@ class Configurable(object):
   def filename(self):
     return self.get('filename')
   @property
+  def parse_filename(self):
+    return self.get('parse_filename')
+  @property
   def embed_size(self):
     return self.getint('embed_size')
   @property

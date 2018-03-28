@@ -75,66 +75,54 @@ class ElmoVocab(BaseVocab):
     max_rank = self.max_rank
     sid = 0
     wid = 0
-    if self.filename.endswith('.xz'):
-      open_func = lzma.open
-    else:
-      open_func = codecs.open
-    with open_func(self.filename, 'rb') as f:
-      reader = codecs.getreader('utf-8')(f, errors='ignore')
-      if self.skip_header == True:
-        reader.readline()
-      for line_num, line in enumerate(reader):
-        if (not max_rank) or line_num < max_rank:
-          line = line.rstrip().split(' ')
-          if len(line) > 1:
-            embeddings.append(np.array(line[1:], dtype=np.float32))
-            self[str(sid)+"-"+str(wid)] = cur_idx
-            wid += 1
-            cur_idx += 1
+    if self.filename:
+      print ("### Loading ELMo for trainset from {}! ###".format(self.filename))
+      if self.filename.endswith('.xz'):
+        open_func = lzma.open
+      else:
+        open_func = codecs.open
+      with open_func(self.filename, 'rb') as f:
+        reader = codecs.getreader('utf-8')(f, errors='ignore')
+        if self.skip_header == True:
+          reader.readline()
+        for line_num, line in enumerate(reader):
+          if (not max_rank) or line_num < max_rank:
+            line = line.rstrip().split(' ')
+            if len(line) > 1:
+              embeddings.append(np.array(line[1:], dtype=np.float32))
+              self["trainset-"+str(sid)+"-"+str(wid)] = cur_idx
+              wid += 1
+              cur_idx += 1
+            else:
+              sid += 1
+              wid = 0
           else:
-            sid += 1
-            wid = 0
-        else:
-          break
-    try:
-      embeddings = np.stack(embeddings)
-      embeddings = np.pad(embeddings, ( (len(self.special_tokens),0), (0,0) ), 'constant')
-      self.embeddings = np.stack(embeddings)
-    except:
-      shapes = set([embedding.shape for embedding in embeddings])
-      raise ValueError("Couldn't stack embeddings with shapes in %s" % shapes)
-    return
-  
-  #=============================================================
-  def load_parse_set(self):
-    """"""
-    
-    embeddings = []
-    cur_idx = len(self.special_tokens)
-    max_rank = self.max_rank
+            break
     sid = 0
     wid = 0
-    if self.filename.endswith('.xz'):
-      open_func = lzma.open
-    else:
-      open_func = codecs.open
-    with open_func(self.filename, 'rb') as f:
-      reader = codecs.getreader('utf-8')(f, errors='ignore')
-      if self.skip_header == True:
-        reader.readline()
-      for line_num, line in enumerate(reader):
-        if (not max_rank) or line_num < max_rank:
-          line = line.rstrip().split(' ')
-          if len(line) > 1:
-            embeddings.append(np.array(line[1:], dtype=np.float32))
-            self[str(sid)+"-"+str(wid)] = cur_idx
-            wid += 1
-            cur_idx += 1
+    if self.parse_filename:
+      print ("### Loading ELMo for parseset from {}! ###".format(self.parse_filename))
+      if self.parse_filename.endswith('.xz'):
+        open_func = lzma.open
+      else:
+        open_func = codecs.open
+      with open_func(self.parse_filename, 'rb') as f:
+        reader = codecs.getreader('utf-8')(f, errors='ignore')
+        if self.skip_header == True:
+          reader.readline()
+        for line_num, line in enumerate(reader):
+          if (not max_rank) or line_num < max_rank:
+            line = line.rstrip().split(' ')
+            if len(line) > 1:
+              embeddings.append(np.array(line[1:], dtype=np.float32))
+              self["parseset-"+str(sid)+"-"+str(wid)] = cur_idx
+              wid += 1
+              cur_idx += 1
+            else:
+              sid += 1
+              wid = 0
           else:
-            sid += 1
-            wid = 0
-        else:
-          break
+            break
     try:
       embeddings = np.stack(embeddings)
       embeddings = np.pad(embeddings, ( (len(self.special_tokens),0), (0,0) ), 'constant')
@@ -158,8 +146,9 @@ class ElmoVocab(BaseVocab):
       self.counts[token] = int(count)
     return
   #=============================================================
-  def index(self, sid, wid):
-    return self._tok2idx.get(str(sid)+"-"+str(wid), self.UNK)
+  # token = "trainset/parseset-sid-wid"
+  def index(self, token):
+    return self._tok2idx.get(token, self.UNK)
 
   #=============================================================
   @property
@@ -184,13 +173,13 @@ if __name__ == '__main__':
   """"""
   
   elmo_vocab = ElmoVocab(None)
-  idx = elmo_vocab.index(0,2)
+  idx = elmo_vocab.index("trainset-1-2")
   emb = tf.nn.embedding_lookup(elmo_vocab.embeddings, idx)
-  idx2 = elmo_vocab.index(1,1)
+  idx2 = elmo_vocab.index("parseset-1-1")
   emb2 = tf.nn.embedding_lookup(elmo_vocab.embeddings, idx2)
   with tf.Session() as sess:
     sess.run(elmo_vocab.embeddings.initializer)
-    print ("get sent 0 word 2 index:{}, it's embedding:\n{}".format(idx, sess.run(emb))) 
-    print ("get sent 1 word 1 index:{}, it's embedding:\n{}".format(idx2, sess.run(emb2))) 
+    print ("get traiset sent 1 word 2 index:{}, it's embedding:\n{}".format(idx, sess.run(emb))) 
+    print ("get parseset sent 1 word 1 index:{}, it's embedding:\n{}".format(idx2, sess.run(emb2))) 
  
   print('ElmoVocab passes')

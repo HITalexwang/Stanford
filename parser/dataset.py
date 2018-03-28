@@ -52,7 +52,8 @@ class Dataset(Configurable):
     else:
       self._nlp_model = None
 
-    if not load_file:
+    self._load_file = load_file
+    if not self.load_file:
       print ("### {} not load file! ###".format(self.name))
       return
 
@@ -63,13 +64,22 @@ class Dataset(Configurable):
         splits[i] += 1
     for multibucket, vocab in self.iteritems():
       multibucket.open(splits, depth=vocab.depth)
-    for sent in self.iterfiles():
-      for multibucket, vocab in self.iteritems():
+    for sid, sent in enumerate(self.iterfiles()):
+      #for multibucket, vocab in self.iteritems():
+      multibucket, vocab = self.get_item(0)
+      tokens = [line[vocab.conll_idx] for line in sent]
+      idxs = [vocab.ROOT] + [vocab.index(token) for token in tokens]
+      multibucket.add(idxs, tokens)
+      # here the second vocab is multivocab
+      multibucket, vocab = self.get_item(1)
+      tokens = [line[vocab.conll_idx] for line in sent]
+      idxs = [vocab.ROOT] + [vocab.index(token, self.name+"-"+str(sid)+"-"+str(wid)) for wid, token in enumerate(tokens)]
+      multibucket.add(idxs, tokens)
+      for i in range(2, len(self)):
+        multibucket, vocab = self.get_item(i)
         tokens = [line[vocab.conll_idx] for line in sent]
         idxs = [vocab.ROOT] + [vocab.index(token) for token in tokens]
         multibucket.add(idxs, tokens)
-        # here the first one is multivocab
-      #multibucket, vocab = self.iteritems()[0]
     for multibucket in self:
       multibucket.close()
     self._multibucket = Multibucket.from_dataset(self)
@@ -172,6 +182,9 @@ class Dataset(Configurable):
   def iteritems(self):
     for i in xrange(len(self)):
       yield (self[i], self._vocabs[i])
+
+  def get_item(self, i):
+    return (self[i], self._vocabs[i])
   
   #=============================================================
   def update_history(self, history, accumulators):
@@ -218,6 +231,9 @@ class Dataset(Configurable):
   @property
   def merge_lines(self):
     return self._merge_lines
+  @property
+  def load_file(self):
+    return self._load_file
   
   
   #=============================================================
