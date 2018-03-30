@@ -23,10 +23,8 @@ import os
 import codecs
 import gzip
 import warnings
-try:
-  from backports import lzma
-except:
-  warnings.warn('Install backports.lzma for xz support')
+import h5py
+import re
 from collections import Counter
 
 import numpy as np
@@ -66,6 +64,61 @@ class ElmoVocab(BaseVocab):
     return matrix
     #return embeddings # changed in saves2/test8
   
+  #=============================================================
+  def iter_sents(self, data_files):
+    """"""
+    for data_file in data_files:
+      with codecs.open(data_file, encoding='utf-8', errors='ignore') as f:
+        buff = []
+        for line in f:
+          line = line.strip()
+          if line and not line.startswith('#'):
+            if not re.match('[0-9]+[-.][0-9]+', line):
+              buff.append(line.split('\t')[1])
+          elif buff:
+            yield buff
+            buff = []
+        if buff:
+          yield buff
+
+  #=============================================================
+  def load(self):
+    """"""
+    
+    embeddings = []
+    cur_idx = len(self.special_tokens)
+    max_rank = self.max_rank
+    if self.filename:
+      print ("### Loading ELMo for trainset from {}! ###".format(self.filename))
+      with h5py.File(self.filename, 'r') as f:
+        for sid, sent in enumerate(self.iter_sents(self.train_files)):
+          elmo = f[' '.join(sent)].value
+          assert(len(elmo) == len(sent))
+          embeddings.extend(elmo)
+          for wid in xrange(len(sent)):
+            self["trainset-"+str(sid)+"-"+str(wid)] = cur_idx
+            cur_idx += 1
+
+    if self.parse_filename:
+      print ("### Loading ELMo for parseset from {}! ###".format(self.parse_filename))
+      with h5py.File(self.parse_filename, 'r') as f:
+        for sid, sent in enumerate(self.iter_sents(self.parse_files)):
+          elmo = f[' '.join(sent)].value
+          assert(len(elmo) == len(sent))
+          embeddings.extend(elmo)
+          for wid in xrange(len(sent)):
+            self["parseset-"+str(sid)+"-"+str(wid)] = cur_idx
+            cur_idx += 1
+    try:
+      embeddings = np.stack(embeddings)
+      embeddings = np.pad(embeddings, ( (len(self.special_tokens),0), (0,0) ), 'constant')
+      self.embeddings = np.stack(embeddings)
+    except:
+      shapes = set([embedding.shape for embedding in embeddings])
+      raise ValueError("Couldn't stack embeddings with shapes in %s" % shapes)
+    return
+
+  """
   #=============================================================
   def load(self):
     """"""
@@ -131,6 +184,7 @@ class ElmoVocab(BaseVocab):
       shapes = set([embedding.shape for embedding in embeddings])
       raise ValueError("Couldn't stack embeddings with shapes in %s" % shapes)
     return
+  """
 
   #=============================================================
   def count(self):
