@@ -167,10 +167,17 @@ class Dataset(Configurable):
           if len(indices.shape) == 2:
             tokens.append(vocab[indices])
           elif len(indices.shape) == 3:
-            tokens.extend([subvocab[indices[:,:,i]] for i, subvocab in enumerate(vocab)])
+            #tokens.extend([subvocab[indices[:,:,i]] for i, subvocab in enumerate(vocab)])
             # TODO This is super hacky
-            if hasattr(subvocab, 'idx2tok'):
-              tokens[-1] = [[subvocab.idx2tok.get(idx, subvocab[subvocab.PAD]) for idx in idxs] for idxs in indices[:,:,-1]]
+            #if hasattr(subvocab, 'idx2tok'):
+              #tokens[-1] = [[subvocab.idx2tok.get(idx, subvocab[subvocab.PAD]) for idx in idxs] for idxs in indices[:,:,-1]]
+
+            for i, subvocab in enumerate(vocab):
+              if hasattr(subvocab, 'idx2tok'):
+                tokens.append([[subvocab.idx2tok.get(idx, subvocab[subvocab.PAD]) for idx in idxs] for idxs in indices[:,:,i]])
+              else:
+                tokens.append(subvocab[indices[:,:,i]])
+                
         elif not shuffle:
           tokens.append(bucket.get_tokens(batch))
       if not shuffle or return_check:

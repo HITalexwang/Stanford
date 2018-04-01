@@ -113,11 +113,18 @@ class Multivocab(Configurable):
   
   #=============================================================
   def index(self, token, elmo_token):
-    if len(self) == 3:
-      return tuple(vocab.index(token) for vocab in self)
+    idxs = []
+    for vocab in self:
+      if vocab.name == 'elmo':
+        idxs.append(vocab.index(elmo_token))
+      else:
+        idxs.append(vocab.index(token))
+    return tuple(idxs)
+    #if len(self) == 3:
+      #return tuple(vocab.index(token) for vocab in self)
     # elmo in position 2 takes the elmo_token(trainset/parseset-sid-wid)
-    elif len(self) == 4:
-      return (self._vocabs[0].index(token), self._vocabs[1].index(token), self._vocabs[2].index(elmo_token), self._vocabs[3].index(token))
+    #elif len(self) == 4:
+      #return (self._vocabs[0].index(token), self._vocabs[1].index(token), self._vocabs[2].index(elmo_token), self._vocabs[3].index(token))
   
   #=============================================================
   @property
