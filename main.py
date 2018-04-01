@@ -80,12 +80,15 @@ def parse(save_dir, **kwargs):
   """"""
   
   kwargs['config_file'] = os.path.join(save_dir, 'config.cfg')
-  files = kwargs.pop('files')
+  #files = kwargs.pop('files')
+  # this will be removed in Network.__init__
+  files = kwargs['files']
   output_file = kwargs.pop('output_file', None)
   output_dir = kwargs.pop('output_dir', None)
   if len(files) > 1 and output_file is not None:
     raise ValueError('Cannot provide a value for --output_file when parsing multiple files')
   kwargs['is_evaluation'] = True
+
   network = Network(**kwargs)
   network.parse(files, output_file=output_file, output_dir=output_dir)
   return
@@ -98,6 +101,7 @@ for section_name in section_names:
   parse_parser.add_argument('--'+section_name, nargs='+')
 parse_parser.add_argument('--output_file')
 parse_parser.add_argument('--output_dir')
+parse_parser.add_argument('--elmo_file')
 
 #===============================================================
 # Ensemble
@@ -123,7 +127,9 @@ def ensemble(save_dir, **kwargs):
   	print ('sum_weights:', sum_weights)
 
   kwargs['config_file'] = os.path.join(save_dir, 'config.cfg')
-  files = kwargs.pop('files')
+  #files = kwargs.pop('files')
+  # this will be removed in Network.__init__
+  files = kwargs['files']
   output_file = kwargs.pop('output_file', None)
   output_dir = kwargs.pop('output_dir', None)
   if len(files) > 1 and output_file is not None:
@@ -145,6 +151,7 @@ ens_parser.add_argument('--sum_type')
 ens_parser.add_argument('--sum_weights', nargs='+')
 ens_parser.add_argument('--output_file')
 ens_parser.add_argument('--output_dir')
+ens_parser.add_argument('--elmo_file')
 
 
 #***************************************************************

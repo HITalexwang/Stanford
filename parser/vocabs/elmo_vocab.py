@@ -38,13 +38,16 @@ class ElmoVocab(BaseVocab):
   """"""
   
   #=============================================================
-  def __init__(self, token_vocab, *args, **kwargs):
+  def __init__(self, token_vocab, elmo_file, files, *args, **kwargs):
     """"""
     
     super(ElmoVocab, self).__init__(*args, **kwargs)
     
     self._token_vocab = token_vocab
-    
+
+    self._elmo_file = elmo_file
+    self._files = files
+
     self.load()
     self.count()
     return
@@ -65,6 +68,14 @@ class ElmoVocab(BaseVocab):
     #return embeddings # changed in saves2/test8
   
   #=============================================================
+  @classmethod
+  def from_vocab(cls, vocab, elmo_file, files, *args, **kwargs):
+    """"""
+    
+    args += (vocab, elmo_file, files, )
+    return cls.from_configurable(vocab, *args, **kwargs)
+
+  #=============================================================
   def iter_sents(self, data_files):
     """"""
     for data_file in data_files:
@@ -84,14 +95,13 @@ class ElmoVocab(BaseVocab):
   #=============================================================
   def load(self):
     """"""
-    
     embeddings = []
     cur_idx = len(self.special_tokens)
-    max_rank = self.max_rank
-    if self.filename:
-      print ("### Loading ELMo for trainset from {}! ###".format(self.filename))
-      with h5py.File(self.filename, 'r') as f:
-        for sid, sent in enumerate(self.iter_sents(self.train_files)):
+
+    if self.elmo_file:
+      print ("### Loading ELMo for testset from {}! ###".format(self.elmo_file))
+      with h5py.File(self.elmo_file, 'r') as f:
+        for sid, sent in enumerate(self.iter_sents(self.files)):
           elmo = f[' '.join(sent)].value
           assert(len(elmo) == len(sent))
           embeddings.extend(elmo)
@@ -99,16 +109,29 @@ class ElmoVocab(BaseVocab):
             self["trainset-"+str(sid)+"-"+str(wid)] = cur_idx
             cur_idx += 1
 
-    if self.parse_filename:
-      print ("### Loading ELMo for parseset from {}! ###".format(self.parse_filename))
-      with h5py.File(self.parse_filename, 'r') as f:
-        for sid, sent in enumerate(self.iter_sents(self.parse_files)):
-          elmo = f[' '.join(sent)].value
-          assert(len(elmo) == len(sent))
-          embeddings.extend(elmo)
-          for wid in xrange(len(sent)):
-            self["parseset-"+str(sid)+"-"+str(wid)] = cur_idx
-            cur_idx += 1
+    else:
+      if self.filename:
+        print ("### Loading ELMo for trainset from {}! ###".format(self.filename))
+        with h5py.File(self.filename, 'r') as f:
+          for sid, sent in enumerate(self.iter_sents(self.train_files)):
+            elmo = f[' '.join(sent)].value
+            assert(len(elmo) == len(sent))
+            embeddings.extend(elmo)
+            for wid in xrange(len(sent)):
+              self["trainset-"+str(sid)+"-"+str(wid)] = cur_idx
+              cur_idx += 1
+
+      if self.parse_filename:
+        print ("### Loading ELMo for parseset from {}! ###".format(self.parse_filename))
+        with h5py.File(self.parse_filename, 'r') as f:
+          for sid, sent in enumerate(self.iter_sents(self.parse_files)):
+            elmo = f[' '.join(sent)].value
+            assert(len(elmo) == len(sent))
+            embeddings.extend(elmo)
+            for wid in xrange(len(sent)):
+              self["parseset-"+str(sid)+"-"+str(wid)] = cur_idx
+              cur_idx += 1
+
     try:
       embeddings = np.stack(embeddings)
       embeddings = np.pad(embeddings, ( (len(self.special_tokens),0), (0,0) ), 'constant')
@@ -221,6 +244,12 @@ class ElmoVocab(BaseVocab):
       with tf.variable_scope(self.name.title()):
         self._embeddings = tf.Variable(matrix, name='Embeddings', trainable=False)
     return
+  @property
+  def elmo_file(self):
+    return self._elmo_file
+  @property
+  def files(self):
+    return self._files
 
 #***************************************************************
 if __name__ == '__main__':

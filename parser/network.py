@@ -42,7 +42,12 @@ class Network(Configurable):
   #=============================================================
   def __init__(self, *args, **kwargs):
     """"""
-    
+    is_eval = ('is_evaluation' in kwargs and kwargs['is_evaluation'])
+    files = kwargs.pop('files') if is_eval else None
+    elmo_file = kwargs["elmo_file"] if 'elmo_file' in kwargs else None
+    if elmo_file:
+      del kwargs['elmo_file']
+
     super(Network, self).__init__(*args, **kwargs)
     # hacky!
     #hacky_train_files = op.join(self.save_dir, op.basename(self.get("train_files")))
@@ -66,7 +71,14 @@ class Network(Configurable):
       subtoken_vocab = self.subtoken_vocab.from_vocab(word_vocab)
       if (self.use_elmo == True):
         print ("### Loading ELMo vocab ###")
-        elmo_vocab = ElmoVocab.from_vocab(word_vocab)
+        if (is_eval):
+          if elmo_file:
+            elmo_vocab = ElmoVocab.from_vocab(word_vocab, elmo_file, files)
+          else:
+            print ("### Error: ELMo file for test set not provided! ###")
+            exit()
+        else:
+          elmo_vocab = ElmoVocab.from_vocab(word_vocab, None, None)
         word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab, elmo_vocab, subtoken_vocab], name=word_vocab.name)
       else:
         word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab, subtoken_vocab], name=word_vocab.name)
