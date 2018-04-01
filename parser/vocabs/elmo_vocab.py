@@ -106,7 +106,7 @@ class ElmoVocab(BaseVocab):
           assert(len(elmo) == len(sent))
           embeddings.extend(elmo)
           for wid in xrange(len(sent)):
-            self["trainset-"+str(sid)+"-"+str(wid)] = cur_idx
+            self["parseset-"+str(sid)+"-"+str(wid)] = cur_idx
             cur_idx += 1
 
     else:
