@@ -237,9 +237,10 @@ class Network(Configurable):
           probs.append(sess.run(parse_outputs, feed_dict=feed_dict))
           sents.append(tokens)
         parseset.write_probs(sents, os.path.join(output_dir, output_file), probs)
-        """
+        
     if self.verbose:
       print('Parsing {0} file(s) took {1} seconds'.format(len(input_files), time.time()-start_time))
+    """
     return
   
   #=============================================================
