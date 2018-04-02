@@ -63,13 +63,14 @@ class Network(Configurable):
     else:
       print ("### Loading word vocab ###")
       word_vocab = WordVocab.from_configurable(self)
+      word_vocabs = [word_vocab]
       #print ("word_vocab len: ", word_vocab.counts)
-      print ("### Loading pretrained vocab ###")
-      pretrained_vocab = PretrainedVocab.from_vocab(word_vocab)
-      print ("### Loading subtoken vocab ###")
-      #self.subtoken_vocab here = CharVocab
-      subtoken_vocab = self.subtoken_vocab.from_vocab(word_vocab)
-      if (self.use_elmo == True):
+      if (self.use_pretrained):
+        print ("### Loading pretrained vocab ###")
+        pretrained_vocab = PretrainedVocab.from_vocab(word_vocab)
+        word_vocabs.append(pretrained_vocab)
+      
+      if (self.use_elmo):
         print ("### Loading ELMo vocab ###")
         if (is_eval):
           if elmo_file:
@@ -79,9 +80,17 @@ class Network(Configurable):
             exit()
         else:
           elmo_vocab = ElmoVocab.from_vocab(word_vocab, None, None)
-        word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab, elmo_vocab, subtoken_vocab], name=word_vocab.name)
-      else:
-        word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab, subtoken_vocab], name=word_vocab.name)
+        word_vocabs.append(elmo_vocab)
+        #word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab, elmo_vocab, subtoken_vocab], name=word_vocab.name)
+      #else:
+        #word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab, subtoken_vocab], name=word_vocab.name)
+
+      print ("### Loading subtoken vocab ###")
+      #self.subtoken_vocab here = CharVocab
+      subtoken_vocab = self.subtoken_vocab.from_vocab(word_vocab)
+      word_vocabs.append(subtoken_vocab)
+
+      word_multivocab = Multivocab.from_configurable(self, word_vocabs, name=word_vocab.name)
       #word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab], name=word_vocab.name)
       tag_vocab = TagVocab.from_configurable(self)
     print ("### Loading dep vocab ###")

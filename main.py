@@ -59,9 +59,9 @@ def train(save_dir, **kwargs):
   
   #print (kwargs)
   #print ("train files:",kwargs['train_files'])
-  print ("initializing")
+  print ("### Initializing ###")
   network = Network(**kwargs)
-  print ("initialized")
+  print ("### Initialized ###")
   network.train(load=load)
   return
 #---------------------------------------------------------------

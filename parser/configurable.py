@@ -367,6 +367,9 @@ class Configurable(object):
   @property
   def use_elmo(self):
     return self.getboolean('use_elmo')
+  @property
+  def use_pretrained(self):
+    return self.getboolean('use_pretrained')
   
   #=============================================================
   # [Zipf / Bucketer]
