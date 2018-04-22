@@ -37,7 +37,7 @@ class Dataset(Configurable):
   """"""
   
   #=============================================================
-  def __init__(self, vocabs,  load_file, *args, **kwargs):
+  def __init__(self, vocabs, load_file, ts_lstm, *args, **kwargs):
     """"""
     # nlp_model = Parser
     nlp_model = kwargs.pop('nlp_model', None)
@@ -52,6 +52,7 @@ class Dataset(Configurable):
     else:
       self._nlp_model = None
 
+    self._ts_lstm = ts_lstm
     self._load_file = load_file
     if not self.load_file:
       print ("### {} not load file! ###".format(self.name))
@@ -90,7 +91,7 @@ class Dataset(Configurable):
     """"""
     #print ("dataset.py(__call__):/n",self.vocabs)
     # Here nlp_model = Parser
-    return self._nlp_model(self.vocabs, moving_params=moving_params)
+    return self._nlp_model(self.vocabs, self.ts_lstm, moving_params=moving_params)
   
   #=============================================================
   def iterfiles(self):
@@ -241,6 +242,10 @@ class Dataset(Configurable):
   @property
   def load_file(self):
     return self._load_file
+  @property
+  def ts_lstm(self):
+    return self._ts_lstm
+  
   
   
   #=============================================================

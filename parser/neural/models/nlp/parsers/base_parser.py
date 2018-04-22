@@ -37,7 +37,7 @@ class BaseParser(NN):
   ROOT = 1
   
   #=============================================================
-  def __call__(self, vocabs, moving_params=None):
+  def __call__(self, vocabs, ts_lstm, moving_params=None):
     """"""
     
     self.moving_params = moving_params
@@ -67,9 +67,13 @@ class BaseParser(NN):
     #print ("_tok_to_keep:",self._tokens_to_keep,"batch:",self._batch_size,"bucket:",self._bucket_size,"seq_len:",self._sequence_lengths,"tokens:",self._n_tokens)
     #exit()
     top_recur = embed
-    for i in xrange(self.n_layers):
-      with tf.variable_scope('RNN%d' % i):
-        top_recur, _ = self.RNN(top_recur, self.recur_size)
+    if ts_lstm:
+      top_recur = ts_lstm(top_recur, self.recur_size, placeholder)
+      print ("top_recur:", top_recur.get_shape())
+    else:
+      for i in xrange(self.n_layers):
+        with tf.variable_scope('RNN%d' % i):
+          top_recur, _ = self.RNN(top_recur, self.recur_size)
     return top_recur
   
   #=============================================================
