@@ -21,6 +21,11 @@ class TS_LSTM(NN):
     """"""
     super(TS_LSTM, self).__init__(*args, **kwargs)
     print ('### TS_LSTM window size:',self.window_size, ' time stride:',self.time_stride, " ###")
+    try:
+      assert(self.window_size >= self.time_stride)
+    except AssertionError:
+      raise ValueError("### Window size (%d) should not be less than time stride (%d)! ###" 
+                        % (self.window_size, self.time_stride))
     return
 
   #=============================================================
@@ -39,20 +44,24 @@ class TS_LSTM(NN):
         with tf.variable_scope('RNN%d' % i, reuse = True):
           remain, _ = self.RNN(remain, output_size, r_seq_lens)
     #"""
-    output, slided = self.slide_to_output(slided, remain, inputs)
+    output = self.slide_to_output(slided, remain, inputs, output_size)
     #return slided, s_seq_lens, remain, r_seq_lens, output
     return output
 
   #=============================================================
-  def slide_to_output(self, slided, remain, inputs):
+  def slide_to_output(self, slided, remain, inputs, recur_size):
     batch_size = tf.shape(inputs)[0]
     seq_len = tf.shape(inputs)[1]
     #recur_size = tf.shape(inputs)[2]
-    recur_size = tf.shape(slided)[2]
+    #recur_size = tf.shape(slided)[2]
+    #print ("rnn_func:",self.rnn_func.__name__)
+    recur_size = 2 * recur_size if self.rnn_func.__name__ == "birnn" else recur_size
     remain_start = seq_len - tf.shape(remain)[1]
 
     slided = tf.expand_dims(slided, 2)
-    slided = tf.reshape(slided, [-1, batch_size, self.window_size, recur_size])
+    slided = tf.cond(tf.greater_equal(seq_len, self.window_size),
+                  lambda: tf.reshape(slided, [-1, batch_size, self.window_size, recur_size]),
+                  lambda: tf.reshape(slided, [-1, batch_size, seq_len, recur_size]))
     n_window = tf.shape(slided)[0]
     offset = tf.constant(1)
     output = slided[0,:,0:1,:]
@@ -73,8 +82,9 @@ class TS_LSTM(NN):
       col = slided[n,:,pos:pos+1,:]
       n = tf.add(n, 1)
       n, offset, col = tf.while_loop(
-        cond = lambda n, offset, _2: tf.logical_and(tf.less_equal(n * self.time_stride, offset), 
+        cond = lambda n, offset, _2: tf.logical_and(tf.logical_and(tf.less_equal(n * self.time_stride, offset), 
                                       tf.greater(n * self.time_stride + self.window_size, offset)),
+                                      tf.less(n, n_window)),
         body = collect,
         loop_vars = (n, offset, col))
       #outputs.append(col)
@@ -86,7 +96,7 @@ class TS_LSTM(NN):
       cond = lambda offset, _1: offset < remain_start,
       body = slide,
       loop_vars = (offset, output),
-      shape_invariants = (offset.get_shape(), tf.TensorShape([None, None, None])))
+      shape_invariants = (offset.get_shape(), tf.TensorShape([None, None, recur_size])))
 
     #"""
     def add_remain(offset, output):
@@ -111,26 +121,25 @@ class TS_LSTM(NN):
       cond = lambda offset, _1 : offset < seq_len,
       body = add_remain,
       loop_vars = (offset, output),
-      shape_invariants = (offset.get_shape(), tf.TensorShape([None, None, None])))
+      shape_invariants = (offset.get_shape(), tf.TensorShape([None, None, recur_size])))
     #"""
-
-    #return slided
-    return output, slided
+    
+    return output
 
   #=============================================================
   def split_to_slide(self, inputs, placeholder):
     seq_len = tf.shape(inputs)[1]
-    offset = tf.cond(tf.greater(seq_len,self.window_size), lambda: tf.constant(self.time_stride), lambda: 0)
-    slided = tf.cond(tf.greater(seq_len,self.window_size), lambda: inputs[:, :self.window_size, :], lambda: inputs[:, :, :])
+    offset = tf.cond(tf.greater_equal(seq_len,self.window_size), lambda: tf.constant(self.time_stride), lambda: seq_len)
+    slided = tf.cond(tf.greater_equal(seq_len,self.window_size), lambda: inputs[:, :self.window_size, :], lambda: inputs[:, :, :])
     #slided = tf.slice(inputs, [0, 0, 0], [-1, offset, -1])
-    s_seq_lens = tf.cond(tf.greater(seq_len,self.window_size),
+    s_seq_lens = tf.cond(tf.greater_equal(seq_len,self.window_size),
       lambda: tf.reduce_sum(tf.to_int32(tf.greater(placeholder[:,:self.window_size], self.PAD)), axis=1),
       lambda: tf.reduce_sum(tf.to_int32(tf.greater(placeholder[:,:], self.PAD)), axis=1))
 
     def slide(offset, slided, s_seq_lens):
       #slided = tf.concat([slided, tf.slice(inputs, [0, offset, 0], [-1, self.window_size, -1])], 0)
       slided = tf.concat([slided, inputs[:, offset : offset+self.window_size, :]], 0)
-      lens = tf.reduce_sum(tf.to_int32(tf.greater(tf.slice(placeholder,[0,offset],[-1,self.window_size]), self.PAD)), axis=1)
+      lens = tf.reduce_sum(tf.to_int32(tf.greater(placeholder[:,offset : offset+self.window_size], self.PAD)), axis=1)
       s_seq_lens = tf.concat([s_seq_lens, lens], 0)
       return (offset + self.time_stride, slided, s_seq_lens)
     
@@ -140,9 +149,11 @@ class TS_LSTM(NN):
       loop_vars = (offset, slided, s_seq_lens))
     
     #remain = tf.cond(tf.less(offset,seq_len),lambda: inputs[:, offset:, :],lambda: inputs[:,:,:])
-    remain = inputs[:, offset:, :]
+    remain = tf.cond(tf.less(offset, seq_len),lambda: inputs[:, offset:, :], lambda: inputs[:, seq_len-1:,:])
+    #r_seq_lens = tf.cond(tf.less(offset, seq_len), 
+                          #lambda: tf.reduce_sum(tf.to_int32(tf.greater(placeholder[:,offset:], self.PAD)), axis=1),
+                          #lambda: tf.reduce_sum(tf.to_int32(tf.greater(placeholder[:,seq_len:], self.PAD)), axis=1))
     r_seq_lens = tf.reduce_sum(tf.to_int32(tf.greater(placeholder[:,offset:], self.PAD)), axis=1)
-    
 
     return (slided, s_seq_lens, remain, r_seq_lens)
 
@@ -183,9 +194,9 @@ if __name__ == "__main__":
   s, sl, r, rl, o = ts(a, 3, holder)
 
   a_1 = np.reshape(np.arange(40),[2,5,4])
-  h_1 = np.array([[1,2,5,4,0],[2,3,4,0,0]])
+  h_1 = np.array([[1,2,5,4,5],[2,3,4,0,0]])
   a_2 = np.reshape(np.arange(56),[2,7,4])
-  h_2 = np.array([[1,2,5,4,1,0,0],[2,3,4,0,0,0,0]])
+  h_2 = np.array([[1,2,5,4,1,6,0],[2,3,4,0,0,0,0]])
   print ('a_1:\n',a_1,'\na_2:\n',a_2)
   with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())

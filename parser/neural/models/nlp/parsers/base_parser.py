@@ -69,11 +69,11 @@ class BaseParser(NN):
     top_recur = embed
     if ts_lstm:
       top_recur = ts_lstm(top_recur, self.recur_size, placeholder)
-      print ("top_recur:", top_recur.get_shape())
     else:
       for i in xrange(self.n_layers):
         with tf.variable_scope('RNN%d' % i):
           top_recur, _ = self.RNN(top_recur, self.recur_size)
+    #print ("top_recur:", top_recur.get_shape())
     return top_recur
   
   #=============================================================
