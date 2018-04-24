@@ -229,6 +229,7 @@ class Network(Configurable):
           sess.run(self.global_epoch.assign_add(1.))
           continue
         break
+      print ('### Finish Training! ###')
       # Now parse the training and testing files
       """
       input_files = self.train_files + self.parse_files
