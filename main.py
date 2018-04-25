@@ -126,6 +126,13 @@ def ensemble(save_dir, **kwargs):
   		assert(w > 0 and w <= 1.0)
   	print ('sum_weights:', sum_weights)
 
+  ts_lstms = kwargs.pop('ts_lstms', None)
+  if ts_lstms is not None:
+    tslstm_option = [(int(w), int(t)) for w, t in [ts.strip().split(',') for ts in ts_lstms.strip().split('/')]]
+  else:
+    tslstm_option = None
+  print ('TS-LSTM:', tslstm_option)
+
   kwargs['config_file'] = os.path.join(save_dir, 'config.cfg')
   #files = kwargs.pop('files')
   # this will be removed in Network.__init__
@@ -137,7 +144,8 @@ def ensemble(save_dir, **kwargs):
   kwargs['is_evaluation'] = True
   #print("ensemble config:\nfiles:{}\noutput_file:{}\noutput_dir:{}\n".format(files, output_file, output_dir))
   network = Network(**kwargs)
-  network.ensemble(files, other_save_dirs, sum_type, sum_weights=sum_weights, output_file=output_file, output_dir=output_dir)
+  network.ensemble(files, other_save_dirs, sum_type, sum_weights=sum_weights, tslstm_option=tslstm_option,
+                    output_file=output_file, output_dir=output_dir)
   return
 #---------------------------------------------------------------
 
@@ -152,7 +160,7 @@ ens_parser.add_argument('--sum_weights', nargs='+')
 ens_parser.add_argument('--output_file')
 ens_parser.add_argument('--output_dir')
 ens_parser.add_argument('--elmo_file')
-
+ens_parser.add_argument('--ts_lstms') # 4,4;8,8;16,16
 
 #***************************************************************
 # Parse the arguments

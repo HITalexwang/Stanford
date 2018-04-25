@@ -313,9 +313,14 @@ class Network(Configurable):
     return
   
   #=============================================================
-  def ensemble(self, input_files, other_save_dirs, sum_type="prob", sum_weights=None, output_dir=None, output_file=None):
+  def ensemble(self, input_files, other_save_dirs, sum_type="prob", sum_weights=None, tslstm_option=None,
+                output_dir=None, output_file=None):
     """"""
-    
+    if tslstm_option is not None:
+      try:
+        assert len(tslstm_option) == len(other_save_dirs)
+      except AssertionError:
+        raise ValueError('### ts_lstms length != other_save_dirs length! ###')
     if not isinstance(input_files, (tuple, list)):
       input_files = [input_files]
     if len(input_files) > 1 and output_file is not None:
@@ -366,10 +371,12 @@ class Network(Configurable):
           sents.append(tokens)
         multi_probs.append(probs)
 
-        for other_dir in other_save_dirs:
+        for i, other_dir in enumerate(other_save_dirs):
           probs = []
           sents = []
           print("Loading from model ",other_dir)
+          if tslstm_option is not None:
+            self._ts_lstm.set(tslstm_option[i][0], tslstm_option[i][1])
           saver.restore(sess, tf.train.latest_checkpoint(other_dir))
           for feed_dict, tokens in parseset.iterbatches(shuffle=False):
             probs.append(sess.run(ensemble_outputs, feed_dict=feed_dict))

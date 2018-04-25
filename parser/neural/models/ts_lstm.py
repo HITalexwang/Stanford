@@ -20,12 +20,14 @@ class TS_LSTM(NN):
   def __init__(self, *args, **kwargs):
     """"""
     super(TS_LSTM, self).__init__(*args, **kwargs)
-    print ('### TS_LSTM window size:',self.window_size, ' time stride:',self.time_stride, " ###")
+    self._window_size = self.window_size
+    self._time_stride = self.time_stride
+    print ('### TS_LSTM window size:',self._window_size, ' time stride:',self._time_stride, " ###")
     try:
-      assert(self.window_size >= self.time_stride)
+      assert(self._window_size >= self._time_stride)
     except AssertionError:
       raise ValueError("### Window size (%d) should not be less than time stride (%d)! ###" 
-                        % (self.window_size, self.time_stride))
+                        % (self._window_size, self._time_stride))
     return
 
   #=============================================================
@@ -49,6 +51,13 @@ class TS_LSTM(NN):
     return output
 
   #=============================================================
+  def set(self, window_size, time_stride):
+    self._window_size = window_size
+    self._time_stride = time_stride
+    print ('### TS_LSTM window size:',self._window_size, ' time stride:',self._time_stride, " ###")
+    return
+
+  #=============================================================
   def slide_to_output(self, slided, remain, inputs, recur_size):
     batch_size = tf.shape(inputs)[0]
     seq_len = tf.shape(inputs)[1]
@@ -59,8 +68,8 @@ class TS_LSTM(NN):
     remain_start = seq_len - tf.shape(remain)[1]
 
     slided = tf.expand_dims(slided, 2)
-    slided = tf.cond(tf.greater_equal(seq_len, self.window_size),
-                  lambda: tf.reshape(slided, [-1, batch_size, self.window_size, recur_size]),
+    slided = tf.cond(tf.greater_equal(seq_len, self._window_size),
+                  lambda: tf.reshape(slided, [-1, batch_size, self._window_size, recur_size]),
                   lambda: tf.reshape(slided, [-1, batch_size, seq_len, recur_size]))
     n_window = tf.shape(slided)[0]
     offset = tf.constant(1)
@@ -69,21 +78,21 @@ class TS_LSTM(NN):
     # (offset - wind) / step < n <= offset / step
     #"""
     def collect(n, offset, col):
-      pos = tf.to_int32(offset - n * self.time_stride)
+      pos = tf.to_int32(offset - n * self._time_stride)
       col = tf.add(col, slided[n,:,pos:pos+1,:])
       return (n + 1, offset, col)
 
     def slide(offset, output):
-      n = tf.cond(tf.less(offset, self.window_size), lambda: 0, 
-            lambda: tf.to_int32((offset - self.window_size) / self.time_stride) + 1)
-      #n = tf.to_int32(tf.floor((offset - self.window_size) / self.time_stride)) + 1
+      n = tf.cond(tf.less(offset, self._window_size), lambda: 0, 
+            lambda: tf.to_int32((offset - self._window_size) / self._time_stride) + 1)
+      #n = tf.to_int32(tf.floor((offset - self._window_size) / self._time_stride)) + 1
       #n = tf.maximum(n, 0)
-      pos = tf.to_int32(offset - n * self.time_stride)
+      pos = tf.to_int32(offset - n * self._time_stride)
       col = slided[n,:,pos:pos+1,:]
       n = tf.add(n, 1)
       n, offset, col = tf.while_loop(
-        cond = lambda n, offset, _2: tf.logical_and(tf.logical_and(tf.less_equal(n * self.time_stride, offset), 
-                                      tf.greater(n * self.time_stride + self.window_size, offset)),
+        cond = lambda n, offset, _2: tf.logical_and(tf.logical_and(tf.less_equal(n * self._time_stride, offset), 
+                                      tf.greater(n * self._time_stride + self._window_size, offset)),
                                       tf.less(n, n_window)),
         body = collect,
         loop_vars = (n, offset, col))
@@ -92,7 +101,7 @@ class TS_LSTM(NN):
       return (offset + 1, output)
 
     offset, output = tf.while_loop(
-      #cond = lambda offset, _1: offset + self.window_size <= seq_len,
+      #cond = lambda offset, _1: offset + self._window_size <= seq_len,
       cond = lambda offset, _1: offset < remain_start,
       body = slide,
       loop_vars = (offset, output),
@@ -100,16 +109,16 @@ class TS_LSTM(NN):
 
     #"""
     def add_remain(offset, output):
-      n = tf.cond(tf.less(offset, self.window_size), lambda: 0, 
-            lambda: tf.to_int32((offset - self.window_size) / self.time_stride) + 1)
-      #n = tf.to_int32(tf.floor((offset - self.window_size) / self.time_stride)) + 1
+      n = tf.cond(tf.less(offset, self._window_size), lambda: 0, 
+            lambda: tf.to_int32((offset - self._window_size) / self._time_stride) + 1)
+      #n = tf.to_int32(tf.floor((offset - self._window_size) / self._time_stride)) + 1
       #n = tf.maximum(n, 0)
-      pos = tf.to_int32(offset - n * self.time_stride)
+      pos = tf.to_int32(offset - n * self._time_stride)
       col = remain[:,(offset-remain_start):(offset-remain_start+1),:]
 
       n, offset, col = tf.while_loop(
-        cond = lambda n, offset, _2: tf.logical_and(tf.logical_and(tf.less_equal(n * self.time_stride, offset), 
-                                      tf.greater(n * self.time_stride + self.window_size, offset)),
+        cond = lambda n, offset, _2: tf.logical_and(tf.logical_and(tf.less_equal(n * self._time_stride, offset), 
+                                      tf.greater(n * self._time_stride + self._window_size, offset)),
                                       tf.less(n, n_window)),
         body = collect,
         loop_vars = (n, offset, col))
@@ -129,22 +138,22 @@ class TS_LSTM(NN):
   #=============================================================
   def split_to_slide(self, inputs, placeholder):
     seq_len = tf.shape(inputs)[1]
-    offset = tf.cond(tf.greater_equal(seq_len,self.window_size), lambda: tf.constant(self.time_stride), lambda: seq_len)
-    slided = tf.cond(tf.greater_equal(seq_len,self.window_size), lambda: inputs[:, :self.window_size, :], lambda: inputs[:, :, :])
+    offset = tf.cond(tf.greater_equal(seq_len,self._window_size), lambda: tf.constant(self._time_stride), lambda: seq_len)
+    slided = tf.cond(tf.greater_equal(seq_len,self._window_size), lambda: inputs[:, :self._window_size, :], lambda: inputs[:, :, :])
     #slided = tf.slice(inputs, [0, 0, 0], [-1, offset, -1])
-    s_seq_lens = tf.cond(tf.greater_equal(seq_len,self.window_size),
-      lambda: tf.reduce_sum(tf.to_int32(tf.greater(placeholder[:,:self.window_size], self.PAD)), axis=1),
+    s_seq_lens = tf.cond(tf.greater_equal(seq_len,self._window_size),
+      lambda: tf.reduce_sum(tf.to_int32(tf.greater(placeholder[:,:self._window_size], self.PAD)), axis=1),
       lambda: tf.reduce_sum(tf.to_int32(tf.greater(placeholder[:,:], self.PAD)), axis=1))
 
     def slide(offset, slided, s_seq_lens):
-      #slided = tf.concat([slided, tf.slice(inputs, [0, offset, 0], [-1, self.window_size, -1])], 0)
-      slided = tf.concat([slided, inputs[:, offset : offset+self.window_size, :]], 0)
-      lens = tf.reduce_sum(tf.to_int32(tf.greater(placeholder[:,offset : offset+self.window_size], self.PAD)), axis=1)
+      #slided = tf.concat([slided, tf.slice(inputs, [0, offset, 0], [-1, self._window_size, -1])], 0)
+      slided = tf.concat([slided, inputs[:, offset : offset+self._window_size, :]], 0)
+      lens = tf.reduce_sum(tf.to_int32(tf.greater(placeholder[:,offset : offset+self._window_size], self.PAD)), axis=1)
       s_seq_lens = tf.concat([s_seq_lens, lens], 0)
-      return (offset + self.time_stride, slided, s_seq_lens)
+      return (offset + self._time_stride, slided, s_seq_lens)
     
     offset, slided, s_seq_lens = tf.while_loop(
-      cond = lambda offset, _1, _2: offset + self.window_size <= seq_len,
+      cond = lambda offset, _1, _2: offset + self._window_size <= seq_len,
       body = slide,
       loop_vars = (offset, slided, s_seq_lens))
     
