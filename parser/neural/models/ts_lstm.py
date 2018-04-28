@@ -22,6 +22,7 @@ class TS_LSTM(NN):
     super(TS_LSTM, self).__init__(*args, **kwargs)
     self._window_size = self.window_size
     self._time_stride = self.time_stride
+    self._parallel_iterations = 5
     print ('### TS_LSTM window size:',self._window_size, ' time stride:',self._time_stride, " ###")
     try:
       assert(self._window_size >= self._time_stride)
@@ -95,7 +96,9 @@ class TS_LSTM(NN):
                                       tf.greater(n * self._time_stride + self._window_size, offset)),
                                       tf.less(n, n_window)),
         body = collect,
-        loop_vars = (n, offset, col))
+        loop_vars = (n, offset, col),
+        parallel_iterations = self._parallel_iterations,
+        swap_memory = True)
       #outputs.append(col)
       output = tf.concat([output, col], 1)
       return (offset + 1, output)
@@ -105,7 +108,9 @@ class TS_LSTM(NN):
       cond = lambda offset, _1: offset < remain_start,
       body = slide,
       loop_vars = (offset, output),
-      shape_invariants = (offset.get_shape(), tf.TensorShape([None, None, recur_size])))
+      shape_invariants = (offset.get_shape(), tf.TensorShape([None, None, recur_size])),
+      parallel_iterations = self._parallel_iterations,
+      swap_memory = True)
 
     #"""
     def add_remain(offset, output):
@@ -121,7 +126,9 @@ class TS_LSTM(NN):
                                       tf.greater(n * self._time_stride + self._window_size, offset)),
                                       tf.less(n, n_window)),
         body = collect,
-        loop_vars = (n, offset, col))
+        loop_vars = (n, offset, col),
+        parallel_iterations = self._parallel_iterations,
+        swap_memory = True)
 
       output = tf.concat([output, col], 1)
       return (offset + 1, output)
@@ -130,7 +137,9 @@ class TS_LSTM(NN):
       cond = lambda offset, _1 : offset < seq_len,
       body = add_remain,
       loop_vars = (offset, output),
-      shape_invariants = (offset.get_shape(), tf.TensorShape([None, None, recur_size])))
+      shape_invariants = (offset.get_shape(), tf.TensorShape([None, None, recur_size])),
+      parallel_iterations = self._parallel_iterations,
+      swap_memory = True)
     #"""
     
     return output
@@ -155,7 +164,9 @@ class TS_LSTM(NN):
     offset, slided, s_seq_lens = tf.while_loop(
       cond = lambda offset, _1, _2: offset + self._window_size <= seq_len,
       body = slide,
-      loop_vars = (offset, slided, s_seq_lens))
+      loop_vars = (offset, slided, s_seq_lens),
+      parallel_iterations = self._parallel_iterations,
+      swap_memory = True)
     
     #remain = tf.cond(tf.less(offset,seq_len),lambda: inputs[:, offset:, :],lambda: inputs[:,:,:])
     remain = tf.cond(tf.less(offset, seq_len),lambda: inputs[:, offset:, :], lambda: inputs[:, seq_len-1:,:])
