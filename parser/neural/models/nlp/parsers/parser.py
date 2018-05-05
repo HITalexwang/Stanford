@@ -58,14 +58,11 @@ class Parser(BaseParser):
       arc_loss = tf.losses.sparse_softmax_cross_entropy(arc_targets, arc_logits, self.tokens_to_keep)
       if arc_placeholder is not None:
         # (n x b x b)
-        arc_preds_onehot = tf.one_hot(arc_preds, self.batch_size)
-        arc_targets_onehot = tf.one_hot(arc_targets, self.batch_size)
+        arc_preds_onehot = tf.one_hot(arc_preds, self.bucket_size)
+        arc_targets_onehot = tf.one_hot(arc_targets, self.bucket_size)
         # Is adding them all right ? should remove pads ?
-        p = tf.multiply(tf.subtract(arc_preds_onehot, arc_targets_onehot), arc_logits)
-        x = tf.reduce_sum(p)
-        arc_loss = tf.losses.add_loss(x)
-      print (x.shape)
-      print (arc_loss.shape)
+        arc_loss = tf.reduce_sum(tf.multiply(tf.subtract(arc_preds_onehot, arc_targets_onehot), arc_logits))
+        tf.losses.add_loss(arc_loss)
       
     with tf.variable_scope('Rel'):
       # (n x b x d) * (d x r x d) * (n x b x d).T -> (n x b x r x b)

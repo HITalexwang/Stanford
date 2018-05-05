@@ -276,6 +276,10 @@ class Network(Configurable):
     with tf.variable_scope(self.name.title()):
       train_tensors = trainset()
     train = self.optimizer(tf.losses.get_total_loss())
+    # workaround for "partial_run() requires empty target_list"
+    # partial_run() does not receive ops
+    with tf.control_dependencies([train]):
+      dummy_train = tf.constant(0)
     train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
     saver = tf.train.Saver(self.save_vars, max_to_keep=1)
     validset = Parseset.from_configurable(self, self.vocabs, True, False, self.ts_lstm, nlp_model=self.nlp_model)
@@ -319,10 +323,10 @@ class Network(Configurable):
       while total_train_iters < max_train_iters:
         for feed_dict in trainset.iterbatches():
           start_time = time.time()
-          part = sess.partial_run_setup(train_outputs + [train_tensors['arc_probs'],train_tensors['tokens_to_keep']] + [train], 
+          part = sess.partial_run_setup(train_outputs + [train_tensors['arc_probs'],train_tensors['tokens_to_keep']] + [dummy_train], 
                                           [p for p in feed_dict] + [trainset.arc_placeholder])
           arc_probs, tokens_to_keep = sess.partial_run(part, [train_tensors['arc_probs'],train_tensors['tokens_to_keep']], feed_dict=feed_dict)
-          batch_values = sess.partial_run(part, train_outputs + [train], feed_dict=trainset.feed_arc(arc_probs, tokens_to_keep))[:-1]
+          batch_values = sess.partial_run(part, train_outputs + [dummy_train], feed_dict=trainset.feed_arc(arc_probs, tokens_to_keep))[:-1]
           batch_time = time.time() - start_time
           # update accumulators
           total_train_iters += 1

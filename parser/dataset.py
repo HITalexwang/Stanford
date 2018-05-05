@@ -29,6 +29,7 @@ import tensorflow as tf
 from parser import Configurable, Multibucket
 from parser.vocabs.base_vocab import BaseVocab
 from parser.misc.bucketer import Bucketer
+from parser.misc.mst import nonprojective
 
 __all__ = ['Trainset', 'Parseset']
 
