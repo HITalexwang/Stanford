@@ -382,6 +382,10 @@ class Configurable(object):
   @property
   def use_tslstm(self):
     return self.getboolean('use_tslstm')
+  @property
+  def hinge_loss(self):
+    return self.getboolean('hinge_loss')
+  
   
   #=============================================================
   # [Zipf / Bucketer]

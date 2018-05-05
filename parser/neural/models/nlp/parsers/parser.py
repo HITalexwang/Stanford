@@ -29,7 +29,7 @@ class Parser(BaseParser):
   """"""
   
   #=============================================================
-  def __call__(self, vocabs, ts_lstm, moving_params=None):
+  def __call__(self, vocabs, ts_lstm, arc_placeholder=None, moving_params=None):
     """"""
     
     top_recur = super(Parser, self).__call__(vocabs, ts_lstm, moving_params=moving_params)
@@ -48,13 +48,25 @@ class Parser(BaseParser):
       arc_probs = tf.nn.softmax(arc_logits)
       # (n x b)
       arc_preds = tf.to_int32(tf.argmax(arc_logits, axis=-1))
+      if arc_placeholder is not None:
+        arc_preds = arc_placeholder
       # (n x b)
       arc_targets = self.vocabs['heads'].placeholder
       # (n x b)
       arc_correct = tf.to_int32(tf.equal(arc_preds, arc_targets))*int_tokens_to_keep
       # ()
       arc_loss = tf.losses.sparse_softmax_cross_entropy(arc_targets, arc_logits, self.tokens_to_keep)
-    
+      if arc_placeholder is not None:
+        # (n x b x b)
+        arc_preds_onehot = tf.one_hot(arc_preds, self.batch_size)
+        arc_targets_onehot = tf.one_hot(arc_targets, self.batch_size)
+        # Is adding them all right ? should remove pads ?
+        p = tf.multiply(tf.subtract(arc_preds_onehot, arc_targets_onehot), arc_logits)
+        x = tf.reduce_sum(p)
+        arc_loss = tf.losses.add_loss(x)
+      print (x.shape)
+      print (arc_loss.shape)
+      
     with tf.variable_scope('Rel'):
       # (n x b x d) * (d x r x d) * (n x b x d).T -> (n x b x r x b)
       rel_logits = self.bilinear(rel_dep_mlp, rel_head_mlp, len(self.vocabs['rels']))

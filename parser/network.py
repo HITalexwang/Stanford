@@ -124,17 +124,26 @@ class Network(Configurable):
   
   #=============================================================
   def train(self, load=False):
+    print ('### Use hinge loss: {} ###'.format(self.hinge_loss))
+    if self.hinge_loss:
+      self.train_hinge(load)
+    else:
+      self.train_cross(load)
+    return
+
+  #=============================================================
+  def train_cross(self, load=False):
     """"""
     
     # prep the configurables
     self.add_file_vocabs(self.parse_files)
-    trainset = Trainset.from_configurable(self, self.vocabs, True, self.ts_lstm, nlp_model=self.nlp_model)
+    trainset = Trainset.from_configurable(self, self.vocabs, True, False, self.ts_lstm, nlp_model=self.nlp_model)
     with tf.variable_scope(self.name.title()):
       train_tensors = trainset()
     train = self.optimizer(tf.losses.get_total_loss())
     train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
     saver = tf.train.Saver(self.save_vars, max_to_keep=1)
-    validset = Parseset.from_configurable(self, self.vocabs, True, self.ts_lstm, nlp_model=self.nlp_model)
+    validset = Parseset.from_configurable(self, self.vocabs, True, False, self.ts_lstm, nlp_model=self.nlp_model)
     with tf.variable_scope(self.name.title(), reuse=True):
       valid_tensors = validset(moving_params=self.optimizer)
     valid_outputs = [valid_tensors[train_key] for train_key in validset.train_keys]
@@ -258,6 +267,119 @@ class Network(Configurable):
     return
   
   #=============================================================
+  def train_hinge(self, load=False):
+    """"""
+    
+    # prep the configurables
+    self.add_file_vocabs(self.parse_files)
+    trainset = Trainset.from_configurable(self, self.vocabs, True, True, self.ts_lstm, nlp_model=self.nlp_model)
+    with tf.variable_scope(self.name.title()):
+      train_tensors = trainset()
+    train = self.optimizer(tf.losses.get_total_loss())
+    train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
+    saver = tf.train.Saver(self.save_vars, max_to_keep=1)
+    validset = Parseset.from_configurable(self, self.vocabs, True, False, self.ts_lstm, nlp_model=self.nlp_model)
+    with tf.variable_scope(self.name.title(), reuse=True):
+      valid_tensors = validset(moving_params=self.optimizer)
+    valid_outputs = [valid_tensors[train_key] for train_key in validset.train_keys]
+    valid_outputs2 = [valid_tensors[valid_key] for valid_key in validset.valid_keys]
+    current_acc = 0
+    best_acc = 0
+    n_iters_since_improvement = 0
+    n_iters_in_epoch = 0
+    
+    # calling these properties is inefficient so we save them in separate variables
+    min_train_iters = self.min_train_iters
+    max_train_iters = self.max_train_iters
+    validate_every = self.validate_every
+    save_every = self.save_every
+    verbose = self.verbose
+    quit_after_n_iters_without_improvement = self.quit_after_n_iters_without_improvement
+    
+    # load or prep the history
+    if load:
+      self.history = pkl.load(open(os.path.join(self.save_dir, 'history.pkl')))
+    else:
+      self.history = {'train': defaultdict(list), 'valid': defaultdict(list)}
+    
+    # start up the session
+    config_proto = tf.ConfigProto()
+    if self.per_process_gpu_memory_fraction == -1:
+      config_proto.gpu_options.allow_growth = True
+    else:
+      config_proto.gpu_options.per_process_gpu_memory_fraction = self.per_process_gpu_memory_fraction
+    with tf.Session(config=config_proto) as sess:
+      sess.run(tf.global_variables_initializer())
+      if load:
+        saver.restore(sess, tf.train.latest_checkpoint(self.save_dir))
+      total_train_iters = sess.run(self.global_step)
+      train_accumulators = np.zeros(len(train_outputs))
+      train_time = 0
+      # training loop
+      while total_train_iters < max_train_iters:
+        for feed_dict in trainset.iterbatches():
+          start_time = time.time()
+          part = sess.partial_run_setup(train_outputs + [train_tensors['arc_probs'],train_tensors['tokens_to_keep']] + [train], 
+                                          [p for p in feed_dict] + [trainset.arc_placeholder])
+          arc_probs, tokens_to_keep = sess.partial_run(part, [train_tensors['arc_probs'],train_tensors['tokens_to_keep']], feed_dict=feed_dict)
+          batch_values = sess.partial_run(part, train_outputs + [train], feed_dict=trainset.feed_arc(arc_probs, tokens_to_keep))[:-1]
+          batch_time = time.time() - start_time
+          # update accumulators
+          total_train_iters += 1
+          n_iters_since_improvement += 1
+          train_accumulators += batch_values
+          train_time += batch_time
+          # possibly validate
+          if total_train_iters == 1 or (total_train_iters % validate_every == 0):
+            valid_accumulators = np.zeros(len(train_outputs))
+            valid_time = 0
+            with codecs.open(os.path.join(self.save_dir, 'sanity_check'), 'w', encoding='utf-8', errors='ignore') as f:
+              for feed_dict, sents in validset.iterbatches(return_check=True):
+                start_time = time.time()
+                batch_values = sess.run(valid_outputs+valid_outputs2, feed_dict=feed_dict)
+                batch_time = time.time() - start_time
+                # update accumulators
+                valid_accumulators += batch_values[:len(valid_outputs)]
+                valid_preds = batch_values[len(valid_outputs):]
+                valid_time += batch_time
+                validset.check(valid_preds, sents, f)
+            # update history
+            trainset.update_history(self.history['train'], train_accumulators)
+            current_acc = validset.update_history(self.history['valid'], valid_accumulators)
+            # print
+            if verbose:
+              print('{0:6d}'.format(int(total_train_iters))+')') 
+              trainset.print_accuracy(train_accumulators, train_time)
+              validset.print_accuracy(valid_accumulators, valid_time)
+            train_accumulators = np.zeros(len(train_outputs))
+            train_time = 0
+            if current_acc > best_acc:
+              if verbose:
+                print('Saving model...')
+              best_acc = current_acc
+              n_iters_since_improvement = 0
+              saver.save(sess, os.path.join(self.save_dir, self.name.lower()),
+                         #global_step=self.global_epoch,
+                         write_meta_graph=False)
+              with open(os.path.join(self.save_dir, 'history.pkl'), 'w') as f:
+                pkl.dump(dict(self.history), f)
+            elif n_iters_since_improvement >= quit_after_n_iters_without_improvement and total_train_iters > min_train_iters:
+              break
+        else:
+          # We've completed one epoch
+          if total_train_iters <= min_train_iters:
+            saver.save(sess, os.path.join(self.save_dir, self.name.lower()),
+                       #global_step=self.global_epoch,
+                       write_meta_graph=False)
+            with open(os.path.join(self.save_dir, 'history.pkl'), 'w') as f:
+              pkl.dump(dict(self.history), f)
+          sess.run(self.global_epoch.assign_add(1.))
+          continue
+        break
+      print ('### Finish Training! ###')
+    return
+
+  #=============================================================
   def parse(self, input_files, output_dir=None, output_file=None):
     """"""
     
@@ -268,7 +390,7 @@ class Network(Configurable):
     self.add_file_vocabs(input_files)
     
     # load the model and prep the parse set
-    trainset = Trainset.from_configurable(self, self.vocabs, False, self.ts_lstm, nlp_model=self.nlp_model)
+    trainset = Trainset.from_configurable(self, self.vocabs, False, False, self.ts_lstm, nlp_model=self.nlp_model)
     with tf.variable_scope(self.name.title()):
       train_tensors = trainset()
     train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
@@ -287,7 +409,7 @@ class Network(Configurable):
       # Iterate through files and batches
       for input_file in input_files:
         #parseset = Parseset.from_configurable(trainset, self.vocabs, parse_files=input_file, nlp_model=self.nlp_model)
-        parseset = Parseset.from_configurable(trainset, self.vocabs, True, self.ts_lstm, parse_files=input_file, nlp_model=self.nlp_model)
+        parseset = Parseset.from_configurable(trainset, self.vocabs, True, False, self.ts_lstm, parse_files=input_file, nlp_model=self.nlp_model)
         with tf.variable_scope(self.name.title(), reuse=True):
           parse_tensors = parseset(moving_params=self.optimizer)
         parse_outputs = [parse_tensors[parse_key] for parse_key in parseset.parse_keys]
@@ -329,7 +451,7 @@ class Network(Configurable):
     self.add_file_vocabs(input_files)
     
     # load the model and prep the parse set
-    trainset = Trainset.from_configurable(self, self.vocabs, False, self.ts_lstm, nlp_model=self.nlp_model)
+    trainset = Trainset.from_configurable(self, self.vocabs, False, False, self.ts_lstm, nlp_model=self.nlp_model)
     with tf.variable_scope(self.name.title()):
       train_tensors = trainset()
     train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
@@ -346,7 +468,7 @@ class Network(Configurable):
       
       # Iterate through files and batches
       for input_file in input_files:
-        parseset = Parseset.from_configurable(trainset, self.vocabs, True, self.ts_lstm, parse_files=input_file, nlp_model=self.nlp_model)
+        parseset = Parseset.from_configurable(trainset, self.vocabs, True, False, self.ts_lstm, parse_files=input_file, nlp_model=self.nlp_model)
         with tf.variable_scope(self.name.title(), reuse=True):
           parse_tensors = parseset(moving_params=self.optimizer)
         ensemble_outputs = [parse_tensors[ensemble_key] for ensemble_key in parseset.ensemble_keys]

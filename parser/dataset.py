@@ -37,7 +37,7 @@ class Dataset(Configurable):
   """"""
   
   #=============================================================
-  def __init__(self, vocabs, load_file, ts_lstm, *args, **kwargs):
+  def __init__(self, vocabs, load_file, use_hinge_loss, ts_lstm, *args, **kwargs):
     """"""
     # nlp_model = Parser
     nlp_model = kwargs.pop('nlp_model', None)
@@ -53,6 +53,13 @@ class Dataset(Configurable):
       self._nlp_model = None
 
     self._ts_lstm = ts_lstm
+
+    self._use_hinge_loss = use_hinge_loss
+    if self.use_hinge_loss:
+      self._arc_placeholder = tf.placeholder(tf.int32, shape=[None, None], name=self.name)
+    else:
+      self._arc_placeholder = None
+
     self._load_file = load_file
     if not self.load_file:
       print ("### {} not load file! ###".format(self.name))
@@ -91,8 +98,22 @@ class Dataset(Configurable):
     """"""
     #print ("dataset.py(__call__):/n",self.vocabs)
     # Here nlp_model = Parser
-    return self._nlp_model(self.vocabs, self.ts_lstm, moving_params=moving_params)
+    return self._nlp_model(self.vocabs, self.ts_lstm, self.arc_placeholder, moving_params=moving_params)
   
+  #=============================================================
+  def feed_arc(self, arc_probs, tokens_to_keep):
+    max_len = arc_probs.shape[1]
+    arc_preds = []
+    for arc_prob, weights in zip(arc_probs, tokens_to_keep):
+      sequence_length = int(np.sum(weights))+1
+      arc_prob = arc_prob[:sequence_length][:,:sequence_length]
+      arc_pred = nonprojective(arc_prob)
+      arc_pred = np.pad(arc_pred, (0, max_len - sequence_length),'constant')
+      arc_preds.append(arc_pred)
+    arc_preds = np.stack(arc_preds)
+    feed_dict = {self.arc_placeholder:arc_preds}
+    return feed_dict
+
   #=============================================================
   def iterfiles(self):
     """"""
@@ -245,6 +266,14 @@ class Dataset(Configurable):
   @property
   def ts_lstm(self):
     return self._ts_lstm
+  @property
+  def use_hinge_loss(self):
+    return self._use_hinge_loss
+  @property
+  def arc_placeholder(self):
+    return self._arc_placeholder
+  
+  
   
   
   

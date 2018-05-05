@@ -254,6 +254,11 @@ class BaseParser(NN):
   
   #=============================================================
   @property
+  def hinge_keys(self):
+    return ('arc_probs', 'tokens_to_keep', 'n_tokens', 'n_seqs', 'loss', 'n_rel_correct', 'n_arc_correct', 'n_correct', 'n_seqs_correct')
+
+  #=============================================================
+  @property
   def valid_keys(self):
     return ('arc_preds', 'rel_preds')
 
