@@ -6,7 +6,9 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
+import warnings
 
+infmin = 0.0000001
 #***************************************************************
 #===============================================================
 def find_cycles(edges):
@@ -147,7 +149,44 @@ def nonprojective(probs):
   probs *= 1-np.eye(len(probs)).astype(np.float32)
   probs[0] = 0
   probs[0,0] = 1
-  probs /= np.sum(probs, axis=1, keepdims=True)
+  with warnings.catch_warnings():
+    warnings.filterwarnings('error')
+    try:
+      probs /= np.sum(probs, axis=1, keepdims=True)
+    except Warning as e:
+      print('Error probs:\n', probs)
+  #probs /= np.sum(probs, axis=1, keepdims=True)
+  
+  #edges = chu_liu_edmonds(probs)
+  edges = greedy(probs)
+  roots = find_roots(edges)
+  best_edges = edges
+  best_score = -np.inf
+  if len(roots) > 1:
+    for root in roots:
+      probs_ = make_root(probs, root)
+      #edges_ = chu_liu_edmonds(probs_)
+      edges_ = greedy(probs_)
+      score = score_edges(probs_, edges_)
+      if score > best_score:
+        best_edges = edges_
+        best_score = score
+  return best_edges
+
+#===============================================================
+def nonprojective2(probs, logit):
+  """"""
+  probs += infmin
+  probs *= 1-np.eye(len(probs)).astype(np.float32)
+  probs[0] = 0
+  probs[0,0] = 1
+  with warnings.catch_warnings():
+    warnings.filterwarnings('error')
+    try:
+      probs /= np.sum(probs, axis=1, keepdims=True)
+    except Warning as e:
+      print('Error probs:\n{}\nlogits:\n{}\n'.format(probs, logit))
+  #probs /= np.sum(probs, axis=1, keepdims=True)
   
   #edges = chu_liu_edmonds(probs)
   edges = greedy(probs)

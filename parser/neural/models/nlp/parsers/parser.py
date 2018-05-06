@@ -57,11 +57,22 @@ class Parser(BaseParser):
       # ()
       arc_loss = tf.losses.sparse_softmax_cross_entropy(arc_targets, arc_logits, self.tokens_to_keep)
       if arc_placeholder is not None:
+        # (n x b) self.tokens_to_keep: (n x b)
+        masked_arc_preds = tf.multiply(arc_preds, tf.to_int32(self.tokens_to_keep))
+        masked_arc_targets = tf.multiply(arc_targets, tf.to_int32(self.tokens_to_keep))
         # (n x b x b)
-        arc_preds_onehot = tf.one_hot(arc_preds, self.bucket_size)
-        arc_targets_onehot = tf.one_hot(arc_targets, self.bucket_size)
-        # Is adding them all right ? should remove pads ?
-        arc_loss = tf.reduce_sum(tf.multiply(tf.subtract(arc_preds_onehot, arc_targets_onehot), arc_logits))
+        arc_preds_onehot = tf.one_hot(masked_arc_preds, self.bucket_size)
+        arc_targets_onehot = tf.one_hot(masked_arc_targets, self.bucket_size)
+        # (n)
+        arc_losses = tf.reduce_sum(tf.multiply(tf.subtract(arc_preds_onehot, arc_targets_onehot), arc_logits), [1,2])
+        # (n x b)
+        masked_margin = tf.multiply(tf.to_float(tf.equal(arc_preds, arc_targets)), self.tokens_to_keep)
+        # (n)
+        margin = tf.reduce_sum(masked_margin, axis = 1)
+        arc_losses += margin
+        # ()
+        arc_loss = tf.reduce_sum(tf.multiply(arc_losses, tf.to_float(tf.greater(arc_losses, 0.0))))
+        #arc_loss = tf.reduce_sum(arc_losses)
         tf.losses.add_loss(arc_loss)
       
     with tf.variable_scope('Rel'):
@@ -91,7 +102,10 @@ class Parser(BaseParser):
     correct = arc_correct * rel_correct
     n_correct = tf.reduce_sum(correct)
     n_seqs_correct = tf.reduce_sum(tf.to_int32(tf.equal(tf.reduce_sum(correct, axis=1), self.sequence_lengths-1)))
-    loss = arc_loss + rel_loss
+    #if arc_placeholder is not None:
+      #arc_loss = tf.reduce_sum(tf.multiply(arc_losses, tf.to_float(tf.greater(arc_losses, 0.0))))
+    #loss = arc_loss + rel_loss
+    loss = (arc_loss + rel_loss) / tf.to_float(self.batch_size)
     
     outputs = {
       'arc_logits': arc_logits,

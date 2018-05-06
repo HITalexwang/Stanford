@@ -323,10 +323,10 @@ class Network(Configurable):
       while total_train_iters < max_train_iters:
         for feed_dict in trainset.iterbatches():
           start_time = time.time()
-          part = sess.partial_run_setup(train_outputs + [train_tensors['arc_probs'],train_tensors['tokens_to_keep']] + [dummy_train], 
+          part = sess.partial_run_setup(train_outputs + [train_tensors['arc_logits'],train_tensors['arc_probs'],train_tensors['tokens_to_keep']] + [dummy_train], 
                                           [p for p in feed_dict] + [trainset.arc_placeholder])
-          arc_probs, tokens_to_keep = sess.partial_run(part, [train_tensors['arc_probs'],train_tensors['tokens_to_keep']], feed_dict=feed_dict)
-          batch_values = sess.partial_run(part, train_outputs + [dummy_train], feed_dict=trainset.feed_arc(arc_probs, tokens_to_keep))[:-1]
+          arc_logits, arc_probs, tokens_to_keep = sess.partial_run(part, [train_tensors['arc_logits'],train_tensors['arc_probs'],train_tensors['tokens_to_keep']], feed_dict=feed_dict)
+          batch_values = sess.partial_run(part, train_outputs + [dummy_train], feed_dict=trainset.feed_arc(arc_logits, arc_probs, tokens_to_keep))[:-1]
           batch_time = time.time() - start_time
           # update accumulators
           total_train_iters += 1
