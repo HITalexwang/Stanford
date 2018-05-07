@@ -47,16 +47,13 @@ class Parser(BaseParser):
       # (n x b x b)
       arc_probs = tf.nn.softmax(arc_logits)
       # (n x b)
-      arc_preds = tf.to_int32(tf.argmax(arc_logits, axis=-1))
-      if arc_placeholder is not None:
-        arc_preds = arc_placeholder
-      # (n x b)
       arc_targets = self.vocabs['heads'].placeholder
-      # (n x b)
-      arc_correct = tf.to_int32(tf.equal(arc_preds, arc_targets))*int_tokens_to_keep
-      # ()
-      arc_loss = tf.losses.sparse_softmax_cross_entropy(arc_targets, arc_logits, self.tokens_to_keep)
+
       if arc_placeholder is not None:
+        # (n x b)
+        arc_preds = arc_placeholder
+        # (n x b)
+        arc_correct = tf.to_int32(tf.equal(arc_preds, arc_targets))*int_tokens_to_keep
         # (n x b) self.tokens_to_keep: (n x b)
         masked_arc_preds = tf.multiply(arc_preds, tf.to_int32(self.tokens_to_keep))
         masked_arc_targets = tf.multiply(arc_targets, tf.to_int32(self.tokens_to_keep))
@@ -65,47 +62,87 @@ class Parser(BaseParser):
         arc_targets_onehot = tf.one_hot(masked_arc_targets, self.bucket_size)
         # (n)
         arc_losses = tf.reduce_sum(tf.multiply(tf.subtract(arc_preds_onehot, arc_targets_onehot), arc_logits), [1,2])
+        # ()
+        arc_loss = tf.reduce_sum(arc_losses)
         # (n x b)
-        masked_margin = tf.multiply(tf.to_float(tf.equal(arc_preds, arc_targets)), self.tokens_to_keep)
+        masked_margin = tf.multiply(tf.to_float(tf.not_equal(arc_preds, arc_targets)), self.tokens_to_keep)
         # (n)
         margin = tf.reduce_sum(masked_margin, axis = 1)
+        # (n)
         arc_losses += margin
+        #arc_loss = tf.reduce_sum(tf.multiply(arc_losses, tf.to_float(tf.greater(arc_losses, 0.0))))
+        #tf.losses.add_loss(arc_loss)
+      else:
+        # (n x b)
+        arc_preds = tf.to_int32(tf.argmax(arc_logits, axis=-1))
+        # (n x b)
+        arc_correct = tf.to_int32(tf.equal(arc_preds, arc_targets))*int_tokens_to_keep
         # ()
-        arc_loss = tf.reduce_sum(tf.multiply(arc_losses, tf.to_float(tf.greater(arc_losses, 0.0))))
-        #arc_loss = tf.reduce_sum(arc_losses)
-        tf.losses.add_loss(arc_loss)
+        arc_loss = tf.losses.sparse_softmax_cross_entropy(arc_targets, arc_logits, self.tokens_to_keep)
       
     with tf.variable_scope('Rel'):
       # (n x b x d) * (d x r x d) * (n x b x d).T -> (n x b x r x b)
       rel_logits = self.bilinear(rel_dep_mlp, rel_head_mlp, len(self.vocabs['rels']))
       # (n x b x r x b)
       rel_probs = tf.nn.softmax(rel_logits, dim=2)
-      # (n x b x b)
-      one_hot = tf.one_hot(arc_preds if moving_params is not None else arc_targets, self.bucket_size)
-      # (n x b x b) -> (n x b x b x 1)
-      one_hot = tf.expand_dims(one_hot, axis=3)
-      # (n x b x r x b) * (n x b x b x 1) -> (n x b x r x 1)
-      select_rel_logits = tf.matmul(rel_logits, one_hot)
-      # (n x b x r x 1) -> (n x b x r)
-      select_rel_logits = tf.squeeze(select_rel_logits, axis=3)
-      # (n x b)
-      rel_preds = tf.to_int32(tf.argmax(select_rel_logits, axis=-1))
-      # (n x b)
-      rel_targets = self.vocabs['rels'].placeholder
-      # (n x b)
-      rel_correct = tf.to_int32(tf.equal(rel_preds, rel_targets))*int_tokens_to_keep
-      # ()
-      rel_loss = tf.losses.sparse_softmax_cross_entropy(rel_targets, select_rel_logits, self.tokens_to_keep)
+
+      if arc_placeholder is not None:
+        # (n x b x b) -> (n x b x b x 1)
+        arc_preds_onehot = tf.expand_dims(arc_preds_onehot, axis=3)
+        arc_targets_onehot = tf.expand_dims(arc_targets_onehot, axis=3)
+        # (n x b x r x b) * (n x b x b x 1) -> (n x b x r x 1)
+        select_rel_logits_preds = tf.matmul(rel_logits, arc_preds_onehot)
+        select_rel_logits_targets = tf.matmul(rel_logits, arc_targets_onehot)
+        # (n x b x r x 1) -> (n x b x r)
+        select_rel_logits_preds = tf.squeeze(select_rel_logits_preds, axis=3)
+        select_rel_logits_targets = tf.squeeze(select_rel_logits_targets, axis=3)
+        # (n x b)
+        rel_preds = tf.to_int32(tf.argmax(select_rel_logits_preds, axis=-1))
+        # (n x b)
+        rel_targets = self.vocabs['rels'].placeholder
+        # (n x b)
+        rel_correct = tf.to_int32(tf.equal(rel_preds, rel_targets))*int_tokens_to_keep
+        n_rels = tf.shape(select_rel_logits_targets)[2]
+        # (n x b x r)
+        rel_preds_onehot = tf.one_hot(rel_preds, n_rels)
+        rel_targets_onehot = tf.one_hot(rel_targets, n_rels)
+        # (n)
+        rel_preds_scores = tf.reduce_sum(tf.multiply(rel_preds_onehot, select_rel_logits_preds), [1,2])
+        rel_targets_scores = tf.reduce_sum(tf.multiply(rel_targets_onehot, select_rel_logits_targets), [1,2])
+        # (n)
+        rel_losses = tf.subtract(rel_preds_scores, rel_targets_scores)
+        # ()
+        rel_loss = tf.reduce_sum(rel_losses)
+      else:
+        # (n x b x b)
+        one_hot = tf.one_hot(arc_preds if moving_params is not None else arc_targets, self.bucket_size)
+        # (n x b x b) -> (n x b x b x 1)
+        one_hot = tf.expand_dims(one_hot, axis=3)
+        # (n x b x r x b) * (n x b x b x 1) -> (n x b x r x 1)
+        select_rel_logits = tf.matmul(rel_logits, one_hot)
+        # (n x b x r x 1) -> (n x b x r)
+        select_rel_logits = tf.squeeze(select_rel_logits, axis=3)
+        # (n x b)
+        rel_preds = tf.to_int32(tf.argmax(select_rel_logits, axis=-1))
+        # (n x b)
+        rel_targets = self.vocabs['rels'].placeholder
+        # (n x b)
+        rel_correct = tf.to_int32(tf.equal(rel_preds, rel_targets))*int_tokens_to_keep
+        # ()
+        rel_loss = tf.losses.sparse_softmax_cross_entropy(rel_targets, select_rel_logits, self.tokens_to_keep)
     
     n_arc_correct = tf.reduce_sum(arc_correct)
     n_rel_correct = tf.reduce_sum(rel_correct)
     correct = arc_correct * rel_correct
     n_correct = tf.reduce_sum(correct)
     n_seqs_correct = tf.reduce_sum(tf.to_int32(tf.equal(tf.reduce_sum(correct, axis=1), self.sequence_lengths-1)))
-    #if arc_placeholder is not None:
-      #arc_loss = tf.reduce_sum(tf.multiply(arc_losses, tf.to_float(tf.greater(arc_losses, 0.0))))
-    #loss = arc_loss + rel_loss
-    loss = (arc_loss + rel_loss) / tf.to_float(self.batch_size)
+
+    if arc_placeholder is not None:
+      losses = tf.add(arc_losses, rel_losses)
+      loss = tf.reduce_sum(tf.multiply(losses, tf.to_float(tf.greater(losses, 0.0))))
+      tf.losses.add_loss(loss)
+    else:
+      loss = arc_loss + rel_loss
     
     outputs = {
       'arc_logits': arc_logits,
