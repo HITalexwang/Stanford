@@ -29,7 +29,7 @@ import tensorflow as tf
 from parser import Configurable, Multibucket
 from parser.vocabs.base_vocab import BaseVocab
 from parser.misc.bucketer import Bucketer
-from parser.misc.mst import nonprojective, nonprojective2
+from parser.misc.mst import nonprojective
 
 __all__ = ['Trainset', 'Parseset']
 
@@ -170,11 +170,16 @@ class Dataset(Configurable):
         elif batch_by == 'seqs':
           n_seqs = bucket.indices.shape[0]
           n_splits = max(n_seqs // batch_size, 1)
+      """
       if shuffle:
         range_func = np.random.permutation
       else:
         range_func = np.arange
       splits = np.array_split(range_func(bucket.indices.shape[0])[1:], n_splits)
+      """
+      splits = np.array_split(np.arange(bucket.indices.shape[0])[1:], n_splits)
+      if shuffle:
+        np.random.shuffle(splits)
       for split in splits:
         batches.append( (bkt_idx, split) )
     if shuffle:

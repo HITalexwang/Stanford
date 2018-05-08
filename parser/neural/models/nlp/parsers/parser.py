@@ -51,8 +51,8 @@ class Parser(BaseParser):
 
       if arc_placeholder is not None:
         # (n x b)
-        #arc_preds = arc_placeholder
-        arc_preds = tf.to_int32(tf.argmax(arc_logits, axis=-1))
+        arc_preds = arc_placeholder
+        #arc_preds = tf.to_int32(tf.argmax(arc_logits, axis=-1))
         # (n x b)
         arc_correct = tf.to_int32(tf.equal(arc_preds, arc_targets))*int_tokens_to_keep
         # (n x b) self.tokens_to_keep: (n x b)
@@ -61,26 +61,28 @@ class Parser(BaseParser):
         # (n x b x b)
         arc_preds_onehot = tf.one_hot(masked_arc_preds, self.bucket_size, on_value = True, off_value = False, dtype = tf.bool)
         arc_targets_onehot = tf.one_hot(masked_arc_targets, self.bucket_size, on_value = True, off_value = False, dtype = tf.bool)
+        
         # (n x b)
-        #arc_preds_scores = tf.reshape(tf.boolean_mask(arc_logits, arc_preds_onehot), [self.batch_size, self.bucket_size])
-        arc_preds_scores = tf.reduce_max(arc_logits, axis = 2)
+        arc_preds_scores = tf.reshape(tf.boolean_mask(arc_logits, arc_preds_onehot), [self.batch_size, self.bucket_size])
+        #arc_preds_scores = tf.reduce_max(arc_logits, axis = 2)
         arc_targets_scores = tf.reshape(tf.boolean_mask(arc_logits, arc_targets_onehot), [self.batch_size, self.bucket_size])
+        #arc_targets_scores = tf.reduce_sum(tf.multiply(arc_logits, tf.to_float(arc_targets_onehot)), 2)
+        # (n)
+        arc_pred_scores = tf.reduce_sum(arc_preds_scores, 1)
+        arc_target_scores = tf.reduce_sum(arc_targets_scores, 1)
         # (n)
         #arc_losses = tf.reduce_sum(tf.multiply(tf.subtract(arc_preds_onehot, arc_targets_onehot), arc_logits), [1,2])
-        arc_losses = tf.reduce_sum(tf.subtract(arc_preds_scores, arc_targets_scores) ,1)
+        #arc_losses = tf.reduce_sum(tf.subtract(arc_preds_scores, arc_targets_scores) ,1)
+        arc_losses = tf.subtract(arc_pred_scores, arc_target_scores)
         # ()
         arc_loss = tf.reduce_sum(arc_losses)
         # (n x b)
-        #masked_margin = tf.multiply(tf.to_float(tf.not_equal(arc_preds, arc_targets)), self.tokens_to_keep)
         #masked_margin = tf.to_float(tf.not_equal(masked_arc_preds, masked_arc_targets))
         # (n)
         #margin = tf.reduce_sum(masked_margin, axis = 1)
-        #margin = tf.reduce_sum(tf.to_float(tf.not_equal(masked_arc_preds, masked_arc_targets)), axis = 1)
         # (n)
         #arc_losses += margin
-        arc_losses = np.add(arc_losses, 1)
-        #arc_loss = tf.reduce_sum(tf.multiply(arc_losses, tf.to_float(tf.greater(arc_losses, 0.0))))
-        #tf.losses.add_loss(arc_loss)
+        #arc_losses = np.add(arc_losses, 1)
       else:
         # (n x b)
         arc_preds = tf.to_int32(tf.argmax(arc_logits, axis=-1))
@@ -125,6 +127,9 @@ class Parser(BaseParser):
         rel_preds_scores = tf.reduce_max(select_rel_logits_preds, axis = 2)
         rel_targets_scores = tf.reshape(tf.boolean_mask(select_rel_logits_targets, rel_targets_onehot), [self.batch_size, self.bucket_size])
         # (n)
+        rel_pred_scores = tf.reduce_sum(rel_preds_scores, 1)
+        rel_target_scores = tf.reduce_sum(rel_targets_scores, 1)
+        # (n)
         #rel_losses = tf.subtract(rel_preds_scores, rel_targets_scores)
         rel_losses = tf.reduce_sum(tf.subtract(rel_preds_scores, rel_targets_scores), 1)
         # ()
@@ -154,9 +159,12 @@ class Parser(BaseParser):
     n_seqs_correct = tf.reduce_sum(tf.to_int32(tf.equal(tf.reduce_sum(correct, axis=1), self.sequence_lengths-1)))
 
     if arc_placeholder is not None:
+      # (n)
       losses = tf.add(arc_losses, rel_losses)
+      #losses = arc_losses
       #loss = tf.reduce_sum(tf.multiply(losses, tf.to_float(tf.greater(losses, 0.0))))
       loss = tf.reduce_sum(tf.maximum(losses, 0))
+      #loss = tf.reduce_sum(losses)
       tf.losses.add_loss(loss)
     else:
       loss = arc_loss + rel_loss
@@ -185,5 +193,12 @@ class Parser(BaseParser):
       'n_seqs_correct': n_seqs_correct,
       'loss': loss
     }
-    
+    """
+    if arc_placeholder is not None:
+      outputs['arc_pred_scores'] = arc_preds_scores
+      outputs['arc_target_scores'] = arc_targets_scores
+      outputs['rel_pred_scores'] = arc_preds
+      outputs['rel_target_scores'] = arc_preds
+      outputs['arc_losses'] = arc_logits
+    """
     return outputs
