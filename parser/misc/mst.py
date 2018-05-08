@@ -145,7 +145,7 @@ def chu_liu_edmonds(probs):
 #===============================================================
 def nonprojective(probs):
   """"""
-  
+  probs += infmin
   probs *= 1-np.eye(len(probs)).astype(np.float32)
   probs[0] = 0
   probs[0,0] = 1

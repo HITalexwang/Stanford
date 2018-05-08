@@ -102,14 +102,14 @@ class Dataset(Configurable):
     return self._nlp_model(self.vocabs, self.ts_lstm, self.arc_placeholder, moving_params=moving_params)
   
   #=============================================================
-  def feed_arc(self, arc_logits, arc_probs, tokens_to_keep):
+  def feed_arc(self, arc_probs, tokens_to_keep):
     max_len = arc_probs.shape[1]
     arc_preds = []
-    #for arc_prob, weights in zip(arc_probs, tokens_to_keep):
-    for arc_logit, arc_prob, weights in zip(arc_logits, arc_probs, tokens_to_keep):
+    for arc_prob, weights in zip(arc_probs, tokens_to_keep):
+    #for arc_logit, arc_prob, weights in zip(arc_logits, arc_probs, tokens_to_keep):
       sequence_length = int(np.sum(weights))+1
       arc_prob = arc_prob[:sequence_length][:,:sequence_length]
-      arc_pred = nonprojective2(arc_prob, arc_logit)
+      arc_pred = nonprojective(arc_prob)
       arc_pred = np.pad(arc_pred, (0, max_len - sequence_length),'constant')
       arc_preds.append(arc_pred)
     arc_preds = np.stack(arc_preds)
