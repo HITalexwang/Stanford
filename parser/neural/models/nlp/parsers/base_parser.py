@@ -70,7 +70,6 @@ class BaseParser(NN):
     if ts_lstm:
       top_rep = ts_lstm(top_rep, self.recur_size, placeholder)
     elif stacked_cnn:
-      print ("conv size:", self.conv_size)
       top_rep = stacked_cnn(top_rep, self.conv_size)
     else:
       for i in xrange(self.n_layers):
