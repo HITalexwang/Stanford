@@ -383,6 +383,9 @@ class Configurable(object):
   def use_tslstm(self):
     return self.getboolean('use_tslstm')
   @property
+  def use_stacked_cnn(self):
+    return self.getboolean('use_stacked_cnn')
+  @property
   def hinge_loss(self):
     return self.getboolean('hinge_loss')
   

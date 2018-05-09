@@ -38,7 +38,7 @@ class Dataset(Configurable):
   """"""
   
   #=============================================================
-  def __init__(self, vocabs, load_file, use_hinge_loss, ts_lstm, *args, **kwargs):
+  def __init__(self, vocabs, load_file, use_hinge_loss, ts_lstm, stacked_cnn, *args, **kwargs):
     """"""
     # nlp_model = Parser
     nlp_model = kwargs.pop('nlp_model', None)
@@ -54,6 +54,8 @@ class Dataset(Configurable):
       self._nlp_model = None
 
     self._ts_lstm = ts_lstm
+
+    self._stacked_cnn = stacked_cnn
 
     self._use_hinge_loss = use_hinge_loss
     if self.use_hinge_loss:
@@ -99,7 +101,8 @@ class Dataset(Configurable):
     """"""
     #print ("dataset.py(__call__):/n",self.vocabs)
     # Here nlp_model = Parser
-    return self._nlp_model(self.vocabs, self.ts_lstm, self.arc_placeholder, moving_params=moving_params)
+    return self._nlp_model(self.vocabs, ts_lstm=self.ts_lstm, arc_placeholder=self.arc_placeholder,
+                            stacked_cnn=self.stacked_cnn ,moving_params=moving_params)
   
   #=============================================================
   def feed_arc(self, arc_probs, tokens_to_keep):
@@ -273,6 +276,9 @@ class Dataset(Configurable):
   @property
   def ts_lstm(self):
     return self._ts_lstm
+  @property
+  def stacked_cnn(self):
+    return self._stacked_cnn
   @property
   def use_hinge_loss(self):
     return self._use_hinge_loss

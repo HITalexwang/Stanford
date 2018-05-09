@@ -35,6 +35,7 @@ from parser.dataset import *
 from parser.misc.colors import ctext
 from parser.neural.optimizers import RadamOptimizer
 from parser.neural.models import TS_LSTM
+from parser.neural.models import StackedCNN
 
 #***************************************************************
 class Network(Configurable):
@@ -105,8 +106,11 @@ class Network(Configurable):
     self._global_epoch = tf.Variable(0., trainable=False, name='global_epoch')
     self._optimizer = RadamOptimizer.from_configurable(self, global_step=self.global_step)
     self._ts_lstm = None
+    self._stacked_cnn = None
     if self.use_tslstm:
       self._ts_lstm = TS_LSTM.from_configurable(self)
+    if self.use_stacked_cnn:
+      self._stacked_cnn = StackedCNN.from_configurable(self)
     return
   
   #=============================================================
@@ -137,13 +141,13 @@ class Network(Configurable):
     
     # prep the configurables
     self.add_file_vocabs(self.parse_files)
-    trainset = Trainset.from_configurable(self, self.vocabs, True, False, self.ts_lstm, nlp_model=self.nlp_model)
+    trainset = Trainset.from_configurable(self, self.vocabs, True, False, self.ts_lstm, self.stacked_cnn, nlp_model=self.nlp_model)
     with tf.variable_scope(self.name.title()):
       train_tensors = trainset()
     train = self.optimizer(tf.losses.get_total_loss())
     train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
     saver = tf.train.Saver(self.save_vars, max_to_keep=1)
-    validset = Parseset.from_configurable(self, self.vocabs, True, False, self.ts_lstm, nlp_model=self.nlp_model)
+    validset = Parseset.from_configurable(self, self.vocabs, True, False, self.ts_lstm, self.stacked_cnn, nlp_model=self.nlp_model)
     with tf.variable_scope(self.name.title(), reuse=True):
       valid_tensors = validset(moving_params=self.optimizer)
     valid_outputs = [valid_tensors[train_key] for train_key in validset.train_keys]
@@ -272,7 +276,7 @@ class Network(Configurable):
     
     # prep the configurables
     self.add_file_vocabs(self.parse_files)
-    trainset = Trainset.from_configurable(self, self.vocabs, True, True, self.ts_lstm, nlp_model=self.nlp_model)
+    trainset = Trainset.from_configurable(self, self.vocabs, True, True, self.ts_lstm, self.stacked_cnn, nlp_model=self.nlp_model)
     with tf.variable_scope(self.name.title()):
       train_tensors = trainset()
     train = self.optimizer(tf.losses.get_total_loss())
@@ -282,7 +286,7 @@ class Network(Configurable):
       dummy_train = tf.constant(0)
     train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
     saver = tf.train.Saver(self.save_vars, max_to_keep=1)
-    validset = Parseset.from_configurable(self, self.vocabs, True, True, self.ts_lstm, nlp_model=self.nlp_model)
+    validset = Parseset.from_configurable(self, self.vocabs, True, True, self.ts_lstm, self.stacked_cnn, nlp_model=self.nlp_model)
     with tf.variable_scope(self.name.title(), reuse=True):
       valid_tensors = validset(moving_params=self.optimizer)
     valid_outputs = [valid_tensors[train_key] for train_key in validset.train_keys]
@@ -411,9 +415,9 @@ class Network(Configurable):
     
     # load the model and prep the parse set
     if self.hinge_loss:
-      trainset = Trainset.from_configurable(self, self.vocabs, False, True, self.ts_lstm, nlp_model=self.nlp_model)
+      trainset = Trainset.from_configurable(self, self.vocabs, False, True, self.ts_lstm, self.stacked_cnn, nlp_model=self.nlp_model)
     else:
-      trainset = Trainset.from_configurable(self, self.vocabs, False, False, self.ts_lstm, nlp_model=self.nlp_model)
+      trainset = Trainset.from_configurable(self, self.vocabs, False, False, self.ts_lstm, self.stacked_cnn, nlp_model=self.nlp_model)
     with tf.variable_scope(self.name.title()):
       train_tensors = trainset()
     train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
@@ -432,9 +436,9 @@ class Network(Configurable):
       # Iterate through files and batches
       for input_file in input_files:
         if self.hinge_loss:
-          parseset = Parseset.from_configurable(trainset, self.vocabs, True, True, self.ts_lstm, parse_files=input_file, nlp_model=self.nlp_model)
+          parseset = Parseset.from_configurable(trainset, self.vocabs, True, True, self.ts_lstm, self.stacked_cnn, parse_files=input_file, nlp_model=self.nlp_model)
         else:
-          parseset = Parseset.from_configurable(trainset, self.vocabs, True, False, self.ts_lstm, parse_files=input_file, nlp_model=self.nlp_model)
+          parseset = Parseset.from_configurable(trainset, self.vocabs, True, False, self.ts_lstm, self.stacked_cnn, parse_files=input_file, nlp_model=self.nlp_model)
         with tf.variable_scope(self.name.title(), reuse=True):
           parse_tensors = parseset(moving_params=self.optimizer)
         parse_outputs = [parse_tensors[parse_key] for parse_key in parseset.parse_keys]
@@ -477,9 +481,9 @@ class Network(Configurable):
     
     # load the model and prep the parse set
     if self.hinge_loss:
-      trainset = Trainset.from_configurable(self, self.vocabs, False, True, self.ts_lstm, nlp_model=self.nlp_model)
+      trainset = Trainset.from_configurable(self, self.vocabs, False, True, self.ts_lstm, self.stacked_cnn, nlp_model=self.nlp_model)
     else:
-      trainset = Trainset.from_configurable(self, self.vocabs, False, False, self.ts_lstm, nlp_model=self.nlp_model)
+      trainset = Trainset.from_configurable(self, self.vocabs, False, False, self.ts_lstm, self.stacked_cnn, nlp_model=self.nlp_model)
     with tf.variable_scope(self.name.title()):
       train_tensors = trainset()
     train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
@@ -497,9 +501,9 @@ class Network(Configurable):
       # Iterate through files and batches
       for input_file in input_files:
         if self.hinge_loss:
-          parseset = Parseset.from_configurable(trainset, self.vocabs, True, True, self.ts_lstm, parse_files=input_file, nlp_model=self.nlp_model)
+          parseset = Parseset.from_configurable(trainset, self.vocabs, True, True, self.ts_lstm, self.stacked_cnn, parse_files=input_file, nlp_model=self.nlp_model)
         else:
-          parseset = Parseset.from_configurable(trainset, self.vocabs, True, False, self.ts_lstm, parse_files=input_file, nlp_model=self.nlp_model)
+          parseset = Parseset.from_configurable(trainset, self.vocabs, True, False, self.ts_lstm, self.stacked_cnn, parse_files=input_file, nlp_model=self.nlp_model)
         with tf.variable_scope(self.name.title(), reuse=True):
           parse_tensors = parseset(moving_params=self.optimizer)
         ensemble_outputs = [parse_tensors[ensemble_key] for ensemble_key in parseset.ensemble_keys]
@@ -568,6 +572,10 @@ class Network(Configurable):
   @property
   def ts_lstm(self):
     return self._ts_lstm
+  @property
+  def stacked_cnn(self):
+    return self._stacked_cnn
+  
   
 
 #***************************************************************

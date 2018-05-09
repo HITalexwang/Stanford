@@ -29,14 +29,14 @@ class Parser(BaseParser):
   """"""
   
   #=============================================================
-  def __call__(self, vocabs, ts_lstm, arc_placeholder=None, moving_params=None):
+  def __call__(self, vocabs, ts_lstm=None, arc_placeholder=None, stacked_cnn=None, moving_params=None):
     """"""
     
-    top_recur = super(Parser, self).__call__(vocabs, ts_lstm, moving_params=moving_params)
+    top_rep = super(Parser, self).__call__(vocabs, ts_lstm, stacked_cnn, moving_params=moving_params)
     int_tokens_to_keep = tf.to_int32(self.tokens_to_keep)
     
     with tf.variable_scope('MLP'):
-      dep_mlp, head_mlp = self.MLP(top_recur, self.arc_mlp_size + self.rel_mlp_size,
+      dep_mlp, head_mlp = self.MLP(top_rep, self.arc_mlp_size + self.rel_mlp_size,
                                    n_splits=2)
       arc_dep_mlp, rel_dep_mlp = tf.split(dep_mlp, [self.arc_mlp_size, self.rel_mlp_size], axis=2)
       arc_head_mlp, rel_head_mlp = tf.split(head_mlp, [self.arc_mlp_size, self.rel_mlp_size], axis=2)
