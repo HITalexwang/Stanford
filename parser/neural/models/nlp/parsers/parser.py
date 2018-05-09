@@ -51,8 +51,8 @@ class Parser(BaseParser):
 
       if arc_placeholder is not None:
         # (n x b)
-        arc_preds = arc_placeholder
         #arc_preds = tf.to_int32(tf.argmax(arc_logits, axis=-1))
+        arc_preds = arc_placeholder
         # (n x b)
         arc_correct = tf.to_int32(tf.equal(arc_preds, arc_targets))*int_tokens_to_keep
         # (n x b) self.tokens_to_keep: (n x b)
@@ -61,7 +61,6 @@ class Parser(BaseParser):
         # (n x b x b)
         arc_preds_onehot = tf.one_hot(masked_arc_preds, self.bucket_size, on_value = True, off_value = False, dtype = tf.bool)
         arc_targets_onehot = tf.one_hot(masked_arc_targets, self.bucket_size, on_value = True, off_value = False, dtype = tf.bool)
-        
         # (n x b)
         arc_preds_scores = tf.reshape(tf.boolean_mask(arc_logits, arc_preds_onehot), [self.batch_size, self.bucket_size])
         #arc_preds_scores = tf.reduce_max(arc_logits, axis = 2)
@@ -71,8 +70,6 @@ class Parser(BaseParser):
         arc_pred_scores = tf.reduce_sum(arc_preds_scores, 1)
         arc_target_scores = tf.reduce_sum(arc_targets_scores, 1)
         # (n)
-        #arc_losses = tf.reduce_sum(tf.multiply(tf.subtract(arc_preds_onehot, arc_targets_onehot), arc_logits), [1,2])
-        #arc_losses = tf.reduce_sum(tf.subtract(arc_preds_scores, arc_targets_scores) ,1)
         arc_losses = tf.subtract(arc_pred_scores, arc_target_scores)
         # ()
         arc_loss = tf.reduce_sum(arc_losses)
@@ -99,18 +96,22 @@ class Parser(BaseParser):
 
       if arc_placeholder is not None:
         # (n x b x b) -> (n x b x b x 1)
-        #arc_preds_onehot = tf.expand_dims(arc_preds_onehot, axis=3)
-        #arc_targets_onehot = tf.expand_dims(arc_targets_onehot, axis=3)
-        arc_preds_onehot = tf.expand_dims(tf.to_float(arc_preds_onehot), axis=3)
+        #arc_preds_onehot = tf.expand_dims(tf.to_float(arc_preds_onehot), axis=3)
         arc_targets_onehot = tf.expand_dims(tf.to_float(arc_targets_onehot), axis=3)
         # (n x b x r x b) * (n x b x b x 1) -> (n x b x r x 1)
-        select_rel_logits_preds = tf.matmul(rel_logits, arc_preds_onehot)
+        #select_rel_logits_preds = tf.matmul(rel_logits, arc_preds_onehot)
         select_rel_logits_targets = tf.matmul(rel_logits, arc_targets_onehot)
         # (n x b x r x 1) -> (n x b x r)
-        select_rel_logits_preds = tf.squeeze(select_rel_logits_preds, axis=3)
+        #select_rel_logits_preds = tf.squeeze(select_rel_logits_preds, axis=3)
         select_rel_logits_targets = tf.squeeze(select_rel_logits_targets, axis=3)
         # (n x b)
-        rel_preds = tf.to_int32(tf.argmax(select_rel_logits_preds, axis=-1))
+        #rel_preds = tf.to_int32(tf.argmax(select_rel_logits_preds, axis=-1))
+        # choose 1st and 2nd label scores from gold tree
+        # (n x b x 2)
+        rel_scores_top2, rel_preds_top2 = tf.nn.top_k(select_rel_logits_targets, 2)
+        rel_preds_1st = rel_preds_top2[:,:,0]
+        #rel_preds_2nd = rel_preds_top2[:,:,1]
+        rel_preds = rel_preds_1st
         # (n x b)
         rel_targets = self.vocabs['rels'].placeholder
         # (n x b)
@@ -119,19 +120,24 @@ class Parser(BaseParser):
         # (n x b x r)
         #rel_preds_onehot = tf.one_hot(rel_preds, n_rels, on_value = True, off_value = False, dtype = tf.bool)
         rel_targets_onehot = tf.one_hot(rel_targets, n_rels, on_value = True, off_value = False, dtype = tf.bool)
-        # (n)
-        #rel_preds_scores = tf.reduce_sum(tf.multiply(rel_preds_onehot, select_rel_logits_preds), [1,2])
-        #rel_targets_scores = tf.reduce_sum(tf.multiply(rel_targets_onehot, select_rel_logits_targets), [1,2])
+        # (n x b)
+        unequal_mask = tf.to_float(np.not_equal(rel_preds_1st, rel_targets))
+        equal_mask = tf.subtract(1.0, unequal_mask)
+        # (n x b x 2)
+        rel_mask_top2 = tf.stack([unequal_mask, equal_mask])
+        # (n x b)
+        wrong_pred_scores = tf.reduce_sum(tf.multiply(rel_scores_top2, rel_mask_top2), 2)
         # (n x b)
         #rel_preds_scores = tf.reshape(tf.boolean_mask(select_rel_logits_preds, rel_preds_onehot), [self.batch_size, self.bucket_size])
-        rel_preds_scores = tf.reduce_max(select_rel_logits_preds, axis = 2)
+        #rel_preds_scores = tf.reduce_max(select_rel_logits_preds, axis = 2)
         rel_targets_scores = tf.reshape(tf.boolean_mask(select_rel_logits_targets, rel_targets_onehot), [self.batch_size, self.bucket_size])
+        # (n x b)
+        rel_loss_scores = tf.subtract(wrong_pred_scores, rel_targets_scores)
+        z = tf.zeros(tf.shape(rel_loss_scores))
+        rel_loss_scores = tf.where(tf.greater(rel_loss_scores, -1.0), rel_loss_scores, z)
         # (n)
-        rel_pred_scores = tf.reduce_sum(rel_preds_scores, 1)
-        rel_target_scores = tf.reduce_sum(rel_targets_scores, 1)
-        # (n)
-        #rel_losses = tf.subtract(rel_preds_scores, rel_targets_scores)
-        rel_losses = tf.reduce_sum(tf.subtract(rel_preds_scores, rel_targets_scores), 1)
+        #rel_losses = tf.reduce_sum(tf.subtract(rel_preds_scores, rel_targets_scores), 1)
+        rel_losses = tf.reduce_sum(rel_loss_scores, 1)
         # ()
         rel_loss = tf.reduce_sum(rel_losses)
       else:
@@ -161,10 +167,8 @@ class Parser(BaseParser):
     if arc_placeholder is not None:
       # (n)
       losses = tf.add(arc_losses, rel_losses)
-      #losses = arc_losses
-      #loss = tf.reduce_sum(tf.multiply(losses, tf.to_float(tf.greater(losses, 0.0))))
-      loss = tf.reduce_sum(tf.maximum(losses, 0))
-      #loss = tf.reduce_sum(losses)
+      #loss = tf.reduce_sum(tf.maximum(losses, 0))
+      loss = tf.reduce_sum(losses)
       tf.losses.add_loss(loss)
     else:
       loss = arc_loss + rel_loss
