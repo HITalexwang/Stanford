@@ -349,6 +349,10 @@ class Configurable(object):
   @property
   def concat_layers(self):
     return self.getboolean('concat_layers')
+  @property
+  def dilated_conv(self):
+    return self.getboolean('dilated_conv')
+  
   
 
   #=============================================================

@@ -201,7 +201,64 @@ def convolutional(inputs, window_size, output_size, n_splits=1, add_bias=True, i
       return tf.split(conv, n_splits, n_dims-1)
     else:
       return conv
+
+#===============================================================
+def dilated_convolutional(inputs, window_size, output_size, dilation=1, n_splits=1, add_bias=False, initializer=None, moving_params=None):
+  """"""
   
+  # Prepare the input
+  if not isinstance(inputs, (list, tuple)):
+    inputs = [inputs]
+  n_dims = len(inputs[0].get_shape().as_list())
+  all_inputs = tf.concat(inputs, n_dims-1)
+  input_size = all_inputs.get_shape().as_list()[-1]
+  bucket_size = tf.shape(all_inputs)[-2]
+  
+  # Prepare the output
+  output_size *= n_splits
+  output_shape = []
+  shape = tf.shape(all_inputs)
+  for i in xrange(n_dims-1):
+    output_shape.append(shape[i])
+  output_shape.append(output_size)
+  output_shape = tf.stack(output_shape)
+  
+  all_inputs = tf.reshape(all_inputs, tf.stack([-1, bucket_size, input_size]))
+  with tf.variable_scope('Convolutional'):
+    # Get the matrix
+    if initializer is None and not tf.get_variable_scope().reuse:
+      mat = orthonormal_initializer(input_size*window_size, output_size//n_splits)
+      mat = np.concatenate([mat]*n_splits, axis=1)
+      # testing dilated conv
+      #mat = np.ones([1, window_size, input_size, output_size])
+      mat = np.reshape(mat, [1, window_size, input_size, output_size])
+      initializer = tf.constant_initializer(mat)
+    # filter : (filter_height = 1, filter_width, in_channels, out_channels)
+    matrix = tf.get_variable('Weights', [1, window_size, input_size, output_size], initializer=initializer)
+    if moving_params is not None:
+      matrix = moving_params.average(matrix)
+    else:
+      tf.add_to_collection('Weights', matrix)
+    
+    # Get the bias
+    if add_bias:
+      bias = tf.get_variable('Biases', [output_size], initializer=tf.zeros_initializer())
+      if moving_params is not None:
+        bias = moving_params.average(bias)
+    else:
+      bias = 0
+ 
+    # (batch x bucket_size x input_size) -> (batch x 1 x bucket_size x input_size)
+    all_inputs = tf.expand_dims(all_inputs, axis = 1)
+    # conv: (batch, height = 1, width = bucket_size, out_channels)
+    conv = tf.nn.atrous_conv2d(value=all_inputs, filters=matrix, rate=dilation, padding='SAME') + bias
+    # (batch x 1 x bucket_size x output_size) -> (batch x bucket_size x output_size)
+    conv = tf.squeeze(conv, axis = 1)
+    conv = tf.reshape(conv, output_shape)
+    if n_splits > 1:
+      return tf.split(conv, n_splits, n_dims-1)
+    else:
+      return conv
 #===============================================================
 def random_mask(prob, mask_shape, dtype=tf.float32):
   """"""

@@ -23,6 +23,12 @@ class StackedCNN(NN):
     self._layers = self.n_layers
     self._window_size = self.window_size
     print ('### Stacked_CNN layers: {}, window size: {} ###'.format(self._layers, self._window_size))
+    if self.dilated_conv:
+      print ('### Using Dilated Convolutional ###')
+      try:
+        assert self._window_size == 3
+      except AssertionError:
+        raise ValueError('### Window size for dilated conv should be 3!({} provided) ###'.format(self._window_size))
     return
 
   #=============================================================
@@ -33,13 +39,22 @@ class StackedCNN(NN):
     top_conv = inputs
     layers = []
     #"""
-    for i in xrange(self.n_layers):
-      with tf.variable_scope('StackedCNN'):
-        with tf.variable_scope('CNN%d' % i):
-          # top_conv: (batch_size, max_len, output_size)
-          top_conv = self.CNN(top_conv, self.window_size, output_size)
-          if self.concat_layers:
-            layers.append(top_conv)
+    if self.dilated_conv:
+      for i in xrange(self.n_layers):
+        with tf.variable_scope('DilatedCNN'):
+          with tf.variable_scope('CNN%d' % i):
+            # top_conv: (batch_size, max_len, output_size)
+            top_conv = self.CNN(top_conv, 3, output_size, dilation = pow(2,i))
+            if self.concat_layers:
+              layers.append(top_conv)
+    else:
+      for i in xrange(self.n_layers):
+        with tf.variable_scope('StackedCNN'):
+          with tf.variable_scope('CNN%d' % i):
+            # top_conv: (batch_size, max_len, output_size)
+            top_conv = self.CNN(top_conv, self.window_size, output_size)
+            if self.concat_layers:
+              layers.append(top_conv)
     if self.concat_layers:
       print ('### Concatenating CNN layers ###')
       top_conv = tf.concat(layers, axis=2)
@@ -47,7 +62,25 @@ class StackedCNN(NN):
     return top_conv
 
   #=============================================================
-  def convolutional(self, inputs, window_size, output_size, keep_prob=None, n_splits=1, add_bias=True, initializer=None):
+  def CNN(self, inputs, window_size, output_size, dilation=1, keep_prob=None, n_splits=1, add_bias=True):
+    """"""
+    
+    if window_size is None:
+      window_size = self.window_size
+    if output_size is None:
+      output_size = self.mlp_size
+    
+    if self.conv_func.__name__.startswith('gated'):
+      output_size *= 2
+    convolutional = self.convolutional(inputs, window_size, output_size, dilation=dilation, keep_prob=keep_prob, n_splits=n_splits, add_bias=add_bias, initializer=None)
+    
+    if isinstance(convolutional, list):
+      return [self.conv_func(conv) for conv in convolutional]
+    else:
+      return self.conv_func(convolutional)
+
+  #=============================================================
+  def convolutional(self, inputs, window_size, output_size, dilation=1, keep_prob=None, n_splits=1, add_bias=True, initializer=None):
     """"""
 
     if isinstance(inputs, (list, tuple)):
@@ -65,8 +98,18 @@ class StackedCNN(NN):
     if keep_prob < 1:
       noise_shape = tf.stack([batch_size, 1, depth])
       inputs = tf.nn.dropout(inputs, keep_prob, noise_shape=noise_shape)
-    
-    conv = linalg.convolutional(inputs,
+    if self.dilated_conv:
+      #print ("dilation:",dilation)
+      conv = linalg.dilated_convolutional(inputs,
+                                window_size,
+                                output_size,
+                                dilation=dilation,
+                                n_splits=n_splits,
+                                add_bias=add_bias,
+                                initializer=initializer,
+                                moving_params=self.moving_params)
+    else:
+      conv = linalg.convolutional(inputs,
                                 window_size,
                                 output_size,
                                 n_splits=n_splits,
