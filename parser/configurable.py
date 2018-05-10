@@ -345,6 +345,13 @@ class Configurable(object):
     return self.getint('time_stride')
 
   #=============================================================
+  # [Stacked CNN]
+  @property
+  def concat_layers(self):
+    return self.getboolean('concat_layers')
+  
+
+  #=============================================================
   # [Network]
   @property
   def min_train_iters(self):

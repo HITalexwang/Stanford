@@ -31,12 +31,18 @@ class StackedCNN(NN):
   def __call__(self, inputs, output_size):
     """"""
     top_conv = inputs
+    layers = []
     #"""
     for i in xrange(self.n_layers):
       with tf.variable_scope('StackedCNN'):
         with tf.variable_scope('CNN%d' % i):
           # top_conv: (batch_size, max_len, output_size)
           top_conv = self.CNN(top_conv, self.window_size, output_size)
+          if self.concat_layers:
+            layers.append(top_conv)
+    if self.concat_layers:
+      print ('### Concatenating CNN layers ###')
+      top_conv = tf.concat(layers, axis=2)
 
     return top_conv
 
