@@ -232,6 +232,12 @@ class Configurable(object):
     return self.getboolean('skip_header')
   
   #=============================================================
+  # [Elmo Vocab]
+  @property
+  def concat_elmo(self):
+    return self.getboolean('concat_elmo')
+
+  #=============================================================
   # [Retrained Vocab]
   @property
   def embed_loss(self):

@@ -45,6 +45,10 @@ class Multivocab(Configurable):
     
     self._vocabs = vocabs
     self._set_special_tokens()
+    self._concat_elmo = False
+    for vocab in self:
+      if vocab.name == 'elmo' and vocab.concat_elmo:
+        self._concat_elmo = True
     # NOTE Don't forget to run index_tokens() after adding test/validation files!
     self.placeholder = None
     return
@@ -53,9 +57,19 @@ class Multivocab(Configurable):
   def __call__(self, placeholder=None, moving_params=None):
     """"""
     # TODO check to see if a word is all unk, and if so, replace it with a random vector
-    
-    embeddings = [vocab(moving_params=moving_params) for vocab in self]
-    return tf.add_n(embeddings)
+    #embeddings = [vocab(moving_params=moving_params) for vocab in self]
+    if self.concat_elmo:
+      embeddings = []
+      for vocab in self:
+        if vocab.name == 'elmo':
+          elmo_embedding = vocab(moving_params=moving_params)
+        else:
+          embeddings.append(vocab(moving_params=moving_params))
+      embeds = tf.concat([tf.add_n(embeddings), elmo_embedding], axis = 2)
+    else:
+      embeddings = [vocab(moving_params=moving_params) for vocab in self]
+      embeds = tf.add_n(embeddings)
+    return embeds
   
   #=============================================================
   def generate_placeholder(self):
@@ -136,6 +150,10 @@ class Multivocab(Configurable):
   @property
   def conll_idx(self):
     return self._conll_idx
+  @property
+  def concat_elmo(self):
+    return self._concat_elmo
+  
   
   #=============================================================
   def __iter__(self):

@@ -55,11 +55,10 @@ class ElmoVocab(BaseVocab):
   #=============================================================
   def __call__(self, placeholder=None, moving_params=None):
     """"""
-    
     embeddings = super(ElmoVocab, self).__call__(placeholder, moving_params=moving_params)
     # (n x b x d') -> (n x b x d)
     with tf.variable_scope(self.name.title()):
-      matrix = linalg.linear(embeddings, self.token_embed_size, moving_params=moving_params)
+      matrix = linalg.linear(embeddings, self.token_embed_size, keep_prob=self.embed_keep_prob, moving_params=moving_params)
       if moving_params is None:
         with tf.variable_scope('Linear', reuse=True):
           weights = tf.get_variable('Weights')
