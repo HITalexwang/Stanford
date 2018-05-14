@@ -358,9 +358,10 @@ class Configurable(object):
   @property
   def dilated_conv(self):
     return self.getboolean('dilated_conv')
+  @property
+  def identity_init(self):
+    return self.getboolean('identity_init')
   
-  
-
   #=============================================================
   # [Network]
   @property

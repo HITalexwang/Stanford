@@ -203,9 +203,9 @@ def convolutional(inputs, window_size, output_size, n_splits=1, add_bias=True, i
       return conv
 
 #===============================================================
-def dilated_convolutional(inputs, window_size, output_size, dilation=1, n_splits=1, add_bias=False, initializer=None, moving_params=None):
+def dilated_convolutional(inputs, window_size, output_size, dilation=1, identity_init=False, n_splits=1, add_bias=False, initializer=None, moving_params=None):
   """"""
-  
+
   # Prepare the input
   if not isinstance(inputs, (list, tuple)):
     inputs = [inputs]
@@ -213,7 +213,6 @@ def dilated_convolutional(inputs, window_size, output_size, dilation=1, n_splits
   all_inputs = tf.concat(inputs, n_dims-1)
   input_size = all_inputs.get_shape().as_list()[-1]
   bucket_size = tf.shape(all_inputs)[-2]
-  
   # Prepare the output
   output_size *= n_splits
   output_shape = []
@@ -232,6 +231,15 @@ def dilated_convolutional(inputs, window_size, output_size, dilation=1, n_splits
       # testing dilated conv
       #mat = np.ones([1, window_size, input_size, output_size])
       mat = np.reshape(mat, [1, window_size, input_size, output_size])
+      if identity_init:
+        input_size = int(all_inputs.shape[-1])
+        print (input_size, output_size)
+        assert input_size <= output_size
+        b = 0
+        for a in xrange(input_size):
+          while int(b * input_size / output_size) <= a:
+            mat[0,1,a,b] = float(input_size) / output_size
+            b += 1
       initializer = tf.constant_initializer(mat)
     # filter : (filter_height = 1, filter_width, in_channels, out_channels)
     matrix = tf.get_variable('Weights', [1, window_size, input_size, output_size], initializer=initializer)

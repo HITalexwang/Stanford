@@ -19,16 +19,22 @@ def tanh(x):
   return tf.nn.tanh(x)
 
 def gated_tanh(x):
-  dim = len(x.get_shape().as_list())-1
-  cell_act, gate_act = tf.split(x, 2, dim)
+  if isinstance(x, list):
+    cell_act, gate_act = x
+  else:
+    dim = len(x.get_shape().as_list())-1
+    cell_act, gate_act = tf.split(x, 2, dim)
   return gate(gate_act) * tanh(cell_act)
 
 def identity(x):
   return tf.identity(x)
 
 def gated_identity(x):
-  dim = len(x.get_shape().as_list())-1
-  cell_act, gate_act = tf.split(x, 2, dim)
+  if isinstance(x, list):
+    cell_act, gate_act = x
+  else:
+    dim = len(x.get_shape().as_list())-1
+    cell_act, gate_act = tf.split(x, 2, dim)
   return gate(gate_act) * identity(cell_act)
 
 def softplus(x):

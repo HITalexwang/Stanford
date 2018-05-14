@@ -72,12 +72,13 @@ class StackedCNN(NN):
     
     if self.conv_func.__name__.startswith('gated'):
       output_size *= 2
+      #gate = self.convolutional(inputs, window_size, output_size, dilation=dilation, keep_prob=keep_prob, n_splits=n_splits, add_bias=add_bias, initializer=None)
     convolutional = self.convolutional(inputs, window_size, output_size, dilation=dilation, keep_prob=keep_prob, n_splits=n_splits, add_bias=add_bias, initializer=None)
     
-    if isinstance(convolutional, list):
-      return [self.conv_func(conv) for conv in convolutional]
-    else:
-      return self.conv_func(convolutional)
+    #if self.conv_func.__name__.startswith('gated'):
+      #return self.conv_func([convolutional, gate])
+    #else:
+    return self.conv_func(convolutional)
 
   #=============================================================
   def convolutional(self, inputs, window_size, output_size, dilation=1, keep_prob=None, n_splits=1, add_bias=True, initializer=None):
@@ -104,6 +105,7 @@ class StackedCNN(NN):
                                 window_size,
                                 output_size,
                                 dilation=dilation,
+                                identity_init=self.identity_init,
                                 n_splits=n_splits,
                                 add_bias=add_bias,
                                 initializer=initializer,
