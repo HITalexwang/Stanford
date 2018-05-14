@@ -361,6 +361,9 @@ class Configurable(object):
   @property
   def identity_init(self):
     return self.getboolean('identity_init')
+  @property
+  def share_gate(self):
+    return self.getboolean('share_gate')
   
   #=============================================================
   # [Network]

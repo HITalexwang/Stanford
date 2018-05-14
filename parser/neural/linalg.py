@@ -203,7 +203,8 @@ def convolutional(inputs, window_size, output_size, n_splits=1, add_bias=True, i
       return conv
 
 #===============================================================
-def dilated_convolutional(inputs, window_size, output_size, dilation=1, identity_init=False, n_splits=1, add_bias=False, initializer=None, moving_params=None):
+def dilated_convolutional(inputs, window_size, output_size, dilation=1, identity_init=False, share_gate =False, 
+                            n_splits=1, add_bias=False, initializer=None, moving_params=None):
   """"""
 
   # Prepare the input
@@ -225,24 +226,35 @@ def dilated_convolutional(inputs, window_size, output_size, dilation=1, identity
   all_inputs = tf.reshape(all_inputs, tf.stack([-1, bucket_size, input_size]))
   with tf.variable_scope('Convolutional'):
     # Get the matrix
-    if initializer is None and not tf.get_variable_scope().reuse:
-      mat = orthonormal_initializer(input_size*window_size, output_size//n_splits)
-      mat = np.concatenate([mat]*n_splits, axis=1)
-      # testing dilated conv
-      #mat = np.ones([1, window_size, input_size, output_size])
-      mat = np.reshape(mat, [1, window_size, input_size, output_size])
-      if identity_init:
-        input_size = int(all_inputs.shape[-1])
-        print (input_size, output_size)
-        assert input_size <= output_size
-        b = 0
-        for a in xrange(input_size):
-          while int(b * input_size / output_size) <= a:
-            mat[0,1,a,b] = float(input_size) / output_size
-            b += 1
-      initializer = tf.constant_initializer(mat)
-    # filter : (filter_height = 1, filter_width, in_channels, out_channels)
-    matrix = tf.get_variable('Weights', [1, window_size, input_size, output_size], initializer=initializer)
+    if share_gate:
+      print ("### Sharing CNN Gate ###")
+      if initializer is None and not tf.get_variable_scope().reuse:
+        mat = orthonormal_initializer(window_size, input_size)
+        mat = np.reshape(mat, [1, window_size, input_size])
+        initializer = tf.constant_initializer(mat)
+      matrix = tf.get_variable('Weights', [1, window_size, input_size, 1], initializer=initializer)
+      # gate : (filter_height = 1, filter_width, in_channels, out_channels)
+      matrix = tf.concat([matrix]*output_size, axis = 3)
+    else:
+      if initializer is None and not tf.get_variable_scope().reuse:
+        mat = orthonormal_initializer(input_size*window_size, output_size//n_splits)
+        mat = np.concatenate([mat]*n_splits, axis=1)
+        # testing dilated conv
+        #mat = np.ones([1, window_size, input_size, output_size])
+        mat = np.reshape(mat, [1, window_size, input_size, output_size])
+        if identity_init:
+          print ("### Identity Initialization in Dilated CNN ###")
+          input_size = int(all_inputs.shape[-1])
+          #print (input_size, output_size)
+          assert input_size <= output_size
+          b = 0
+          for a in xrange(input_size):
+            while int(b * input_size / output_size) <= a:
+              mat[0,1,a,b] = float(input_size) / output_size
+              b += 1
+        initializer = tf.constant_initializer(mat)
+      # filter : (filter_height = 1, filter_width, in_channels, out_channels)
+      matrix = tf.get_variable('Weights', [1, window_size, input_size, output_size], initializer=initializer)
     if moving_params is not None:
       matrix = moving_params.average(matrix)
     else:

@@ -37,6 +37,22 @@ def gated_identity(x):
     cell_act, gate_act = tf.split(x, 2, dim)
   return gate(gate_act) * identity(cell_act)
 
+def gated_relu(x):
+  if isinstance(x, list):
+    cell_act, gate_act = x
+  else:
+    dim = len(x.get_shape().as_list())-1
+    cell_act, gate_act = tf.split(x, 2, dim)
+  return gate(gate_act) * relu(cell_act)
+
+def gated_leaky_relu(x):
+  if isinstance(x, list):
+    cell_act, gate_act = x
+  else:
+    dim = len(x.get_shape().as_list())-1
+    cell_act, gate_act = tf.split(x, 2, dim)
+  return gate(gate_act) * leaky_relu(cell_act)
+
 def softplus(x):
   return tf.softplus(2*x)/2
 
