@@ -70,7 +70,7 @@ class BaseParser(NN):
     if ts_lstm:
       top_rep = ts_lstm(top_rep, self.recur_size, placeholder)
     elif stacked_cnn:
-      top_rep = stacked_cnn(top_rep, self.conv_size)
+      top_rep = stacked_cnn(top_rep, self.conv_size, placeholder)
     else:
       for i in xrange(self.n_layers):
         with tf.variable_scope('RNN%d' % i):

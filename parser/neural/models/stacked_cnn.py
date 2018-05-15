@@ -32,27 +32,35 @@ class StackedCNN(NN):
     return
 
   #=============================================================
-  # inputs: (batch_size, max_len, embed_size)
-  # output: (batch_size, max_len, cnn_size)
-  def __call__(self, inputs, output_size):
+  # inputs: (batch_size, bucket_size, embed_size)
+  # output: (batch_size, bucket_size, output_size)
+  # placeholder : (batch_size, bucket_size)
+  def __call__(self, inputs, output_size, placeholder):
     """"""
     top_conv = inputs
     layers = []
+    input_shape = tf.shape(inputs)
+    batch_size, bucket_size, _ = tf.unstack(input_shape, 3)
+    # (batch_size, bucket_size) -> (batch_size, bucket_size, output_size)
+    masks = tf.stack([tf.greater(placeholder, self.PAD)] * output_size , axis = 2)
+    zeros = tf.zeros(tf.stack([batch_size, bucket_size, output_size]), inputs.dtype)
     #"""
     if self.dilated_conv:
       for i in xrange(self.n_layers):
         with tf.variable_scope('DilatedCNN'):
           with tf.variable_scope('CNN%d' % i):
-            # top_conv: (batch_size, max_len, output_size)
+            # top_conv: (batch_size, bucket_size, output_size)
             top_conv = self.CNN(top_conv, 3, output_size, dilation = pow(2,i))
+            top_conv = tf.where(masks, top_conv, zeros)
             if self.concat_layers:
               layers.append(top_conv)
     else:
       for i in xrange(self.n_layers):
         with tf.variable_scope('StackedCNN'):
           with tf.variable_scope('CNN%d' % i):
-            # top_conv: (batch_size, max_len, output_size)
+            # top_conv: (batch_size, bucket_size, output_size)
             top_conv = self.CNN(top_conv, self.window_size, output_size)
+            top_conv = tf.where(masks, top_conv, zeros)
             if self.concat_layers:
               layers.append(top_conv)
     if self.concat_layers:
