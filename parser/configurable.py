@@ -364,6 +364,9 @@ class Configurable(object):
   @property
   def share_gate(self):
     return self.getboolean('share_gate')
+  @property
+  def use_residual(self):
+    return self.getboolean('use_residual')
   
   #=============================================================
   # [Network]

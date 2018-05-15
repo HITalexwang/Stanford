@@ -66,7 +66,16 @@ class StackedCNN(NN):
     if self.concat_layers:
       print ('### Concatenating CNN layers ###')
       top_conv = tf.concat(layers, axis=2)
-
+    else:
+      if self.use_residual:
+        input_size = int(inputs.shape[-1])
+        if input_size == output_size:
+          top_conv += inputs
+        else:
+          #print ("residual{}->{}".format(input_size, output_size))
+          with tf.variable_scope('CNN'):
+            with tf.variable_scope('Residual'):
+              top_conv += linalg.linear(inputs, output_size)
     return top_conv
 
   #=============================================================
