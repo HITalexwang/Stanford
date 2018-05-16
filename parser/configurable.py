@@ -367,7 +367,10 @@ class Configurable(object):
   @property
   def use_residual(self):
     return self.getboolean('use_residual')
-  
+  @property
+  def feature_maps(self):
+    return self.getlist('feature_maps')
+
   #=============================================================
   # [Network]
   @property

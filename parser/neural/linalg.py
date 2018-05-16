@@ -37,7 +37,7 @@ def orthonormal_initializer(input_size, output_size):
   return Q.astype(np.float32)
 
 #===============================================================
-def linear(inputs, output_size, n_splits=1, add_bias=True, initializer=None, moving_params=None):
+def linear(inputs, output_size, batch_norm=True, n_splits=1, add_bias=True, initializer=None, moving_params=None):
   """"""
   
   # Prepare the input
@@ -80,6 +80,10 @@ def linear(inputs, output_size, n_splits=1, add_bias=True, initializer=None, mov
     
     # Do the multiplication
     lin = tf.matmul(all_inputs, matrix) + bias
+    # batch norm
+    if batch_norm:
+      lin = tf.layers.batch_normalization(lin, training=moving_params is None)
+
     lin = tf.reshape(lin, output_shape)
     if n_splits > 1:
       return tf.split(lin, n_splits, n_dims-1)
@@ -152,7 +156,7 @@ def bilinear(inputs1, inputs2, output_size, n_splits=1, add_bias1=True, add_bias
       return bilin
 
 #===============================================================
-def convolutional(inputs, window_size, output_size, n_splits=1, add_bias=True, initializer=None, moving_params=None):
+def convolutional(inputs, window_size, output_size, batch_norm=True, n_splits=1, add_bias=True, initializer=None, moving_params=None):
   """"""
   
   # Prepare the input
@@ -196,6 +200,9 @@ def convolutional(inputs, window_size, output_size, n_splits=1, add_bias=True, i
       
     # Do the multiplication
     conv = tf.nn.conv1d(all_inputs, matrix, 1, 'SAME') + bias
+    # batch norm
+    if batch_norm:
+      conv = tf.layers.batch_normalization(conv, training=moving_params is None)
     conv = tf.reshape(conv, output_shape)
     if n_splits > 1:
       return tf.split(conv, n_splits, n_dims-1)
@@ -203,7 +210,7 @@ def convolutional(inputs, window_size, output_size, n_splits=1, add_bias=True, i
       return conv
 
 #===============================================================
-def dilated_convolutional(inputs, window_size, output_size, dilation=1, identity_init=False, share_gate =False, 
+def dilated_convolutional(inputs, window_size, output_size, batch_norm=True, dilation=1, identity_init=False, share_gate =False, 
                             n_splits=1, add_bias=False, initializer=None, moving_params=None):
   """"""
 
@@ -274,6 +281,10 @@ def dilated_convolutional(inputs, window_size, output_size, dilation=1, identity
     conv = tf.nn.atrous_conv2d(value=all_inputs, filters=matrix, rate=dilation, padding='SAME') + bias
     # (batch x 1 x bucket_size x output_size) -> (batch x bucket_size x output_size)
     conv = tf.squeeze(conv, axis = 1)
+    # batch norm
+    if batch_norm:
+      print ("###BN###")
+      conv = tf.layers.batch_normalization(conv, training=moving_params is None)
     conv = tf.reshape(conv, output_shape)
     if n_splits > 1:
       return tf.split(conv, n_splits, n_dims-1)
