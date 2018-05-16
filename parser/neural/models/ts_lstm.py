@@ -34,8 +34,9 @@ class TS_LSTM(NN):
   #=============================================================
   # inputs: (batch_size, max_len, embed_size)
   # output: (batch_size, max_len, recur_size) recur_size = output_size * 2 if use birnn
-  def __call__(self, inputs, output_size, placeholder):
+  def __call__(self, inputs, output_size, placeholder, moving_params=None):
     """"""
+    self.moving_params = moving_params
     self._batch_size = tf.shape(placeholder)[0]
     slided, s_seq_lens, remain, r_seq_lens = self.split_to_slide(inputs, placeholder)
     

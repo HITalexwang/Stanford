@@ -68,7 +68,7 @@ class BaseParser(NN):
     #exit()
     top_rep = embed
     if ts_lstm:
-      top_rep = ts_lstm(top_rep, self.recur_size, placeholder)
+      top_rep = ts_lstm(top_rep, self.recur_size, placeholder, self.moving_params)
     elif stacked_cnn:
       top_rep = stacked_cnn(top_rep, self.conv_size, placeholder, self.moving_params)
     else:
