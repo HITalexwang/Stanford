@@ -144,7 +144,9 @@ class Network(Configurable):
     trainset = Trainset.from_configurable(self, self.vocabs, True, False, self.ts_lstm, self.stacked_cnn, nlp_model=self.nlp_model)
     with tf.variable_scope(self.name.title()):
       train_tensors = trainset()
-    train = self.optimizer(tf.losses.get_total_loss())
+    update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+    with tf.control_dependencies(update_ops):
+      train = self.optimizer(tf.losses.get_total_loss())
     train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
     saver = tf.train.Saver(self.save_vars, max_to_keep=1)
     validset = Parseset.from_configurable(self, self.vocabs, True, False, self.ts_lstm, self.stacked_cnn, nlp_model=self.nlp_model)
