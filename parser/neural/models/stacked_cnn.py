@@ -46,10 +46,11 @@ class StackedCNN(NN):
     mask = tf.greater(placeholder, self.PAD)
     #"""
     if self.dilated_conv:
+      # residual
+      res = top_conv
       #for i in xrange(self.n_layers):
       for i in xrange(len(self.feature_maps)):
-        # residual
-        res = top_conv
+        print ("### Layer {}: Output size: {} ###".format(i, self.feature_maps[i]))
         # get the output size of this layer (layer_size)
         if self.feature_maps[i].endswith('R'):
           use_res = True
@@ -57,7 +58,6 @@ class StackedCNN(NN):
         else:
           use_res = False
           layer_size = int(self.feature_maps[i])
-        print ("### Layer {}: Output size: {} ###".format(i, self.feature_maps[i]))
         masks = tf.stack([mask] * layer_size , axis = 2)
         zeros = tf.zeros(tf.stack([batch_size, bucket_size, layer_size]), inputs.dtype)
         with tf.variable_scope('DilatedCNN'):
@@ -73,6 +73,7 @@ class StackedCNN(NN):
               else:
                 with tf.variable_scope('Residual'):
                   top_conv += linalg.linear(res, layer_size)
+              res = top_conv
             if self.concat_layers:
               layers.append(top_conv)
     else:
