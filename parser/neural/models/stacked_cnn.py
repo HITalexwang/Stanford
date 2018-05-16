@@ -35,9 +35,9 @@ class StackedCNN(NN):
   # inputs: (batch_size, bucket_size, embed_size)
   # output: (batch_size, bucket_size, output_size)
   # placeholder : (batch_size, bucket_size)
-  def __call__(self, inputs, output_size, placeholder):
+  def __call__(self, inputs, output_size, placeholder, moving_params=None):
     """"""
-
+    self.moving_params = moving_params
     top_conv = inputs
     layers = []
     input_shape = tf.shape(inputs)
