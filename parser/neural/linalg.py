@@ -37,7 +37,7 @@ def orthonormal_initializer(input_size, output_size):
   return Q.astype(np.float32)
 
 #===============================================================
-def linear(inputs, output_size, batch_norm=True, n_splits=1, add_bias=True, initializer=None, moving_params=None):
+def linear(inputs, output_size, batch_norm=False, n_splits=1, add_bias=True, initializer=None, moving_params=None):
   """"""
   
   # Prepare the input
