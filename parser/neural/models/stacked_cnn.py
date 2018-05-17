@@ -149,7 +149,7 @@ class StackedCNN(NN):
                                 window_size,
                                 output_size,
                                 dilation=dilation,
-                                identity_init=self.identity_init,
+                                identity_init=str(self.identity_init),
                                 share_gate=share_gate,
                                 n_splits=n_splits,
                                 add_bias=add_bias,

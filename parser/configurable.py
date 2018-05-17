@@ -360,7 +360,8 @@ class Configurable(object):
     return self.getboolean('dilated_conv')
   @property
   def identity_init(self):
-    return self.getboolean('identity_init')
+    #return self.getboolean('identity_init')
+    return self.get('identity_init')
   @property
   def share_gate(self):
     return self.getboolean('share_gate')

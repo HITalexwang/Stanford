@@ -210,7 +210,7 @@ def convolutional(inputs, window_size, output_size, batch_norm=True, n_splits=1,
       return conv
 
 #===============================================================
-def dilated_convolutional(inputs, window_size, output_size, batch_norm=True, dilation=1, identity_init=False, share_gate =False, 
+def dilated_convolutional(inputs, window_size, output_size, batch_norm=True, dilation=1, identity_init=None, share_gate =False, 
                             n_splits=1, add_bias=False, initializer=None, moving_params=None):
   """"""
 
@@ -249,8 +249,10 @@ def dilated_convolutional(inputs, window_size, output_size, batch_norm=True, dil
         # testing dilated conv
         #mat = np.ones([1, window_size, input_size, output_size])
         mat = np.reshape(mat, [1, window_size, input_size, output_size])
-        if identity_init:
+        if identity_init and not identity_init == 'False':
           print ("### Identity Initialization in Dilated CNN ###")
+          if identity_init == 'zero':
+            mat = np.zeros([1, window_size, input_size, output_size])
           input_size = int(all_inputs.shape[-1])
           #print (input_size, output_size)
           assert input_size <= output_size
