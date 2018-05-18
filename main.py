@@ -33,6 +33,7 @@ from parser import Network
 # Set up the argparser
 argparser = ArgumentParser('Network')
 argparser.add_argument('--save_dir', required=True)
+argparser.add_argument('--log_file')
 subparsers = argparser.add_subparsers()
 section_names = set()
 # --section_name opt1=value1 opt2=value2 opt3=value3
@@ -167,11 +168,16 @@ ens_parser.add_argument('--ts_lstms') # 4,4;8,8;16,16
 kwargs = vars(argparser.parse_args())
 action = kwargs.pop('action')
 save_dir = kwargs.pop('save_dir')
+log_file = kwargs.pop('log_file', None)
 kwargs = {key: value for key, value in kwargs.iteritems() if value is not None}
 for section, values in kwargs.iteritems():
   if section in section_names:
     values = [value.split('=', 1) for value in values]
     kwargs[section] = {opt: value for opt, value in values}
+if log_file is not None:
+  if 'configurable' not in kwargs:
+    kwargs['configurable'] = {}
+  kwargs['configurable']['log_file'] = log_file
 if 'default' not in kwargs:
   kwargs['default'] = {}
 kwargs['default']['save_dir'] = save_dir

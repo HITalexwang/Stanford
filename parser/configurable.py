@@ -179,6 +179,16 @@ class Configurable(object):
   @property
   def verbose(self):
     return self.getboolean('verbose')
+  @property
+  def log_file(self):
+    return self.get('log_file')
+  @property
+  def log(self):
+    if not hasattr(self, '_log'):
+      if os.path.isfile(self.log_file):
+        os.remove(self.log_file)
+      self._log = file(self.log_file, 'w')
+    return self._log
   
   #=============================================================
   # [Vocab]
