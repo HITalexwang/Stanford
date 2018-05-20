@@ -216,20 +216,14 @@ class Network(Configurable):
             current_acc = validset.update_history(self.history['valid'], valid_accumulators)
             # print
             if verbose:
-              print('{0:6d}'.format(int(total_train_iters))+')')
-              self.log.write('{0:6d}'.format(int(total_train_iters))+')\n')
-              train_acc = trainset.print_accuracy(train_accumulators, train_time)
-              valid_acc = validset.print_accuracy(valid_accumulators, valid_time)
-              print(train_acc)
-              self.log.write(train_acc+'\n')
-              print(valid_acc)
-              self.log.write(valid_acc+'\n')
+              print('{0:6d}'.format(int(total_train_iters))+')') 
+              trainset.print_accuracy(train_accumulators, train_time)
+              validset.print_accuracy(valid_accumulators, valid_time)
             train_accumulators = np.zeros(len(train_outputs))
             train_time = 0
             if current_acc > best_acc:
               if verbose:
                 print('Saving model...')
-                self.log.write('Saving model...\n')
               best_acc = current_acc
               n_iters_since_improvement = 0
               saver.save(sess, os.path.join(self.save_dir, self.name.lower()),
@@ -251,7 +245,6 @@ class Network(Configurable):
           continue
         break
       print ('### Finish Training! ###')
-      self.log.write('### Finish Training! ###\n')
       # Now parse the training and testing files
       """
       input_files = self.train_files + self.parse_files
@@ -381,20 +374,14 @@ class Network(Configurable):
             current_acc = validset.update_history(self.history['valid'], valid_accumulators)
             # print
             if verbose:
-              print('{0:6d}'.format(int(total_train_iters))+')')
-              self.log.write('{0:6d}'.format(int(total_train_iters))+')\n')
-              train_acc = trainset.print_accuracy(train_accumulators, train_time)
-              valid_acc = validset.print_accuracy(valid_accumulators, valid_time)
-              print(train_acc)
-              self.log.write(train_acc+'\n')
-              print(valid_acc)
-              self.log.write(valid_acc+'\n')
+              print('{0:6d}'.format(int(total_train_iters))+')') 
+              trainset.print_accuracy(train_accumulators, train_time)
+              validset.print_accuracy(valid_accumulators, valid_time)
             train_accumulators = np.zeros(len(train_outputs))
             train_time = 0
             if current_acc > best_acc:
               if verbose:
                 print('Saving model...')
-                self.log.write('Saving model...\n')
               best_acc = current_acc
               n_iters_since_improvement = 0
               saver.save(sess, os.path.join(self.save_dir, self.name.lower()),
@@ -416,7 +403,6 @@ class Network(Configurable):
           continue
         break
       print ('### Finish Training! ###')
-      self.log.write('### Finish Training! ###\n')
     return
 
   #=============================================================

@@ -119,8 +119,8 @@ class BaseParser(NN):
     strings.append('SS: {SS:5.2f}%')
     strings.append('Speed: {Seq_rate:6.1f} seqs/sec')
     string = '{0}  ' + ' | '.join(strings)
-    #print(string.format(prefix, **acc_dict))
-    return (string.format(prefix, **acc_dict))
+    print(string.format(prefix, **acc_dict))
+    return
   
   #=============================================================
   def plot(self, history, prefix='Train'):
