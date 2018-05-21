@@ -71,7 +71,6 @@ class Network(Configurable):
         print ("### Loading pretrained vocab ###")
         pretrained_vocab = PretrainedVocab.from_vocab(word_vocab)
         word_vocabs.append(pretrained_vocab)
-      
       if (self.use_elmo):
         print ("### Loading ELMo vocab ###")
         if (is_eval):
@@ -102,6 +101,10 @@ class Network(Configurable):
     head_vocab = HeadVocab.from_configurable(self)
     rel_vocab = RelVocab.from_configurable(self)
     self._vocabs = [dep_vocab, word_multivocab, lemma_vocab, tag_vocab, xtag_vocab, head_vocab, rel_vocab]
+    if (self.use_position):
+      print ("### Loading position vocab ###")
+      position_vocab = PositionVocab.from_configurable(self)
+      self._vocabs.insert(1, position_vocab)
     self._global_step = tf.Variable(0., trainable=False, name='global_step')
     self._global_epoch = tf.Variable(0., trainable=False, name='global_epoch')
     self._optimizer = RadamOptimizer.from_configurable(self, global_step=self.global_step)

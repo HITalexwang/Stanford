@@ -50,7 +50,12 @@ class BaseParser(NN):
     #print ("base_parser.py(__call__):input_vocabs:",input_vocabs)
     #exit()
     #embed = tf.concat([vocab(moving_params=self.moving_params) for vocab in input_vocabs], 2)
-    embed = self.embed_concat(input_vocabs)
+    if self.concat_position:
+      print ("### Concatenating position embeddings ###")
+      embed = self.embed_concat(input_vocabs)
+    else:
+      print ("### Adding position embeddings ###")
+      embed = self.embed_concat(input_vocabs, vocabs_to_merge=[['words', 'lemmas'], ['words', 'positions'], ['tags', 'xtags']])
     for vocab in self.vocabs.values():
       if vocab not in input_vocabs:
         vocab.generate_placeholder()

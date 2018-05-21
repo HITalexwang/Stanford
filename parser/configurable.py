@@ -331,6 +331,9 @@ class Configurable(object):
   @property
   def output_vocabs(self):
     return self.getlist('output_vocabs')
+  @property
+  def concat_position(self):
+    return self.getboolean('concat_position')
   
   #=============================================================
   # [Dataset]
@@ -407,6 +410,9 @@ class Configurable(object):
   @property
   def use_pretrained(self):
     return self.getboolean('use_pretrained')
+  @property
+  def use_position(self):
+    return self.getboolean('use_position')
   @property
   def use_tslstm(self):
     return self.getboolean('use_tslstm')

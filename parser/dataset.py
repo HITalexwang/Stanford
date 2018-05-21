@@ -76,6 +76,15 @@ class Dataset(Configurable):
     for multibucket, vocab in self.iteritems():
       multibucket.open(splits, depth=vocab.depth)
     for sid, sent in enumerate(self.iterfiles()):
+      for i in xrange(len(self)):
+        multibucket, vocab = self.get_item(i)
+        tokens = [line[vocab.conll_idx] for line in sent]
+        if vocab.name == 'words':
+          idxs = [vocab.ROOT] + [vocab.index(token, self.name+"-"+str(sid)+"-"+str(wid)) for wid, token in enumerate(tokens)]
+        else:
+          idxs = [vocab.ROOT] + [vocab.index(token) for token in tokens]
+        multibucket.add(idxs, tokens)
+      """
       #for multibucket, vocab in self.iteritems():
       multibucket, vocab = self.get_item(0)
       tokens = [line[vocab.conll_idx] for line in sent]
@@ -91,6 +100,7 @@ class Dataset(Configurable):
         tokens = [line[vocab.conll_idx] for line in sent]
         idxs = [vocab.ROOT] + [vocab.index(token) for token in tokens]
         multibucket.add(idxs, tokens)
+      """
     for multibucket in self:
       multibucket.close()
     self._multibucket = Multibucket.from_dataset(self)
@@ -205,6 +215,7 @@ class Dataset(Configurable):
               #tokens[-1] = [[subvocab.idx2tok.get(idx, subvocab[subvocab.PAD]) for idx in idxs] for idxs in indices[:,:,-1]]
 
             for i, subvocab in enumerate(vocab):
+              # subtoken vocab
               if hasattr(subvocab, 'idx2tok'):
                 tokens.append([[subvocab.idx2tok.get(idx, subvocab[subvocab.PAD]) for idx in idxs] for idxs in indices[:,:,i]])
               else:
@@ -285,10 +296,6 @@ class Dataset(Configurable):
   @property
   def arc_placeholder(self):
     return self._arc_placeholder
-  
-  
-  
-  
   
   #=============================================================
   def __len__(self):

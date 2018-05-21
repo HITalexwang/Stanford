@@ -30,7 +30,7 @@ import tensorflow as tf
 from parser.vocabs.base_vocab import BaseVocab
 from parser.misc.zipf import Zipf
 
-__all__ = ['WordVocab', 'LemmaVocab', 'TagVocab', 'XTagVocab', 'RelVocab']
+__all__ = ['WordVocab', 'LemmaVocab', 'TagVocab', 'XTagVocab', 'RelVocab', 'PositionVocab']
 
 #***************************************************************
 class TokenVocab(BaseVocab):
@@ -141,6 +141,8 @@ class TokenVocab(BaseVocab):
     return self._conll_idx
 
 #***************************************************************
+class PositionVocab(TokenVocab):
+  _conll_idx = 0
 class WordVocab(TokenVocab):
   _conll_idx = 1
 class LemmaVocab(WordVocab):

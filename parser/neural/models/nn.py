@@ -53,6 +53,7 @@ class NN(Configurable):
     merge_dict = {vocab.name:vocab.name for vocab in vocabs}
     for vocab1, vocab2 in vocabs_to_merge:
       merge_dict[vocab2] = vocab1
+    #print (merge_dict)
     if self.moving_params is None:
       placeholders = []
       drop_masks = []
