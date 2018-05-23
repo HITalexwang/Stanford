@@ -374,6 +374,9 @@ class Configurable(object):
   @property
   def feature_maps(self):
     return self.getlist('feature_maps')
+  @property
+  def batch_norm(self):
+    return self.getboolean('batch_norm')
 
   #=============================================================
   # [Network]

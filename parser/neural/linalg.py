@@ -285,7 +285,7 @@ def dilated_convolutional(inputs, window_size, output_size, batch_norm=True, dil
     conv = tf.squeeze(conv, axis = 1)
     # batch norm
     if batch_norm:
-      #print ("###BN###")
+      print ("###BN###", moving_params is None)
       conv = tf.layers.batch_normalization(conv, training=moving_params is None)
     conv = tf.reshape(conv, output_shape)
     if n_splits > 1:
