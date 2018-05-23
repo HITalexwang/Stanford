@@ -205,6 +205,7 @@ class Dataset(Configurable):
         bucket = multibucket[bkt_idx]
         indices = bucket.indices[batch]
         vocab.set_feed_dict(indices, feed_dict)
+        if vocab.name == 'positions': continue
         if return_check:
           if len(indices.shape) == 2:
             tokens.append(vocab[indices])
