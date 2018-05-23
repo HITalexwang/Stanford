@@ -334,6 +334,9 @@ class Configurable(object):
   @property
   def concat_position(self):
     return self.getboolean('concat_position')
+  @property
+  def l2_norm(self):
+    return self.getboolean('l2_norm')
   
   #=============================================================
   # [Dataset]

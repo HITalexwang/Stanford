@@ -172,7 +172,12 @@ class Parser(BaseParser):
       tf.losses.add_loss(loss)
     else:
       loss = arc_loss + rel_loss
-    
+    if self.l2_norm:
+      #print ('\n'.join([w.name for w in tf.get_collection('Weights')]))
+      l2_losses = [tf.nn.l2_loss(w) for w in tf.get_collection('Weights')]
+      #print (len(l2_losses))
+      tf.losses.add_loss(tf.add_n(l2_losses))
+
     outputs = {
       'arc_logits': arc_logits,
       'arc_probs': arc_probs,

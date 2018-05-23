@@ -161,7 +161,7 @@ class Network(Configurable):
     best_acc = 0
     n_iters_since_improvement = 0
     n_iters_in_epoch = 0
-    
+
     # calling these properties is inefficient so we save them in separate variables
     min_train_iters = self.min_train_iters
     max_train_iters = self.max_train_iters
