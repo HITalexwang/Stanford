@@ -176,7 +176,7 @@ class Parser(BaseParser):
       #print ('\n'.join([w.name for w in tf.get_collection('Weights')]))
       l2_losses = [tf.nn.l2_loss(w) for w in tf.get_collection('Weights')]
       #print (len(l2_losses))
-      tf.losses.add_loss(tf.add_n(l2_losses))
+      tf.losses.add_loss(self.l2_rate * tf.add_n(l2_losses))
 
     outputs = {
       'arc_logits': arc_logits,
