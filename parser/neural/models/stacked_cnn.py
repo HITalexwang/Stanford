@@ -20,15 +20,15 @@ class StackedCNN(NN):
   def __init__(self, *args, **kwargs):
     """"""
     super(StackedCNN, self).__init__(*args, **kwargs)
-    self._layers = self.n_layers
-    self._window_size = self.window_size
-    print ('### Stacked_CNN layers: {}, window size: {} ###'.format(self._layers, self._window_size))
+    #self._layers = self.n_layers
+    #self._window_size = self.window_size
+    print ('### {} CNN layers: {}, window size: {} ###'.format('Dilated' if self.dilated_conv else 'Vanilla', len(self.feature_maps), self.window_size))
     if self.dilated_conv:
       print ('### Using Dilated Convolutional ###')
-      try:
-        assert self._window_size == 3
-      except AssertionError:
-        raise ValueError('### Window size for dilated conv should be 3!({} provided) ###'.format(self._window_size))
+      #try:
+      #  assert self._window_size == 3
+      #except AssertionError:
+      #  raise ValueError('### Window size for dilated conv should be 3!({} provided) ###'.format(self._window_size))
     return
 
   #=============================================================
@@ -63,8 +63,7 @@ class StackedCNN(NN):
         with tf.variable_scope('DilatedCNN'):
           with tf.variable_scope('CNN%d' % i):
             # top_conv: (batch_size, bucket_size, output_size)
-            #top_conv = self.CNN(top_conv, 3, output_size, dilation = pow(2,i))
-            top_conv = self.CNN(top_conv, 3, layer_size, dilation = pow(2,i))
+            top_conv = self.CNN(top_conv, self.window_size, layer_size, dilation = pow(2,i))
             top_conv = tf.where(masks, top_conv, zeros)
             if use_res:
               input_size = int(res.shape[-1])
@@ -76,17 +75,39 @@ class StackedCNN(NN):
               res = top_conv
             if self.concat_layers:
               layers.append(top_conv)
+    # vanilla cnn
     else:
-      masks = tf.stack([mask] * output_size , axis = 2)
-      zeros = tf.zeros(tf.stack([batch_size, bucket_size, output_size]), inputs.dtype)
-      for i in xrange(self.n_layers):
-        with tf.variable_scope('StackedCNN'):
+      # residual
+      res = top_conv
+      #for i in xrange(self.n_layers):
+      for i in xrange(len(self.feature_maps)):
+        print ("### Layer {}: Output size: {} ###".format(i, self.feature_maps[i]))
+        # get the output size of this layer (layer_size)
+        if self.feature_maps[i].endswith('R'):
+          use_res = True
+          layer_size = int(self.feature_maps[i][:-1])
+        else:
+          use_res = False
+          layer_size = int(self.feature_maps[i])
+        masks = tf.stack([mask] * layer_size , axis = 2)
+        zeros = tf.zeros(tf.stack([batch_size, bucket_size, layer_size]), inputs.dtype)
+        with tf.variable_scope('VanillaCNN'):
           with tf.variable_scope('CNN%d' % i):
             # top_conv: (batch_size, bucket_size, output_size)
-            top_conv = self.CNN(top_conv, self.window_size, output_size)
+            #top_conv = self.CNN(top_conv, 3, output_size, dilation = pow(2,i))
+            top_conv = self.CNN(top_conv, self.window_size, layer_size)
             top_conv = tf.where(masks, top_conv, zeros)
+            if use_res:
+              input_size = int(res.shape[-1])
+              if input_size == layer_size:
+                top_conv += res
+              else:
+                with tf.variable_scope('Residual'):
+                  top_conv += linalg.linear(res, layer_size)
+              res = top_conv
             if self.concat_layers:
               layers.append(top_conv)
+
     if self.concat_layers:
       print ('### Concatenating CNN layers ###')
       top_conv = tf.concat(layers, axis=2)
