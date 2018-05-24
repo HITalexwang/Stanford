@@ -69,43 +69,15 @@ class Dataset(Configurable):
       return
 
     #print ("---dataset.py---after\n",nlp_model)
-    with Bucketer.from_configurable(self, self.n_buckets, name='bucketer-%s'%self.name) as bucketer:
-      splits = bucketer.compute_splits(len(sent) for sent in self.iterfiles())
-      for i in xrange(len(splits)):
-        splits[i] += 1
-    for multibucket, vocab in self.iteritems():
-      multibucket.open(splits, depth=vocab.depth)
-    for sid, sent in enumerate(self.iterfiles()):
-      for i in xrange(len(self)):
-        multibucket, vocab = self.get_item(i)
-        tokens = [line[vocab.conll_idx] for line in sent]
-        if vocab.name == 'words':
-          idxs = [vocab.ROOT] + [vocab.index(token, self.name+"-"+str(sid)+"-"+str(wid)) for wid, token in enumerate(tokens)]
-        else:
-          idxs = [vocab.ROOT] + [vocab.index(token) for token in tokens]
-        multibucket.add(idxs, tokens)
-      """
-      #for multibucket, vocab in self.iteritems():
-      multibucket, vocab = self.get_item(0)
-      tokens = [line[vocab.conll_idx] for line in sent]
-      idxs = [vocab.ROOT] + [vocab.index(token) for token in tokens]
-      multibucket.add(idxs, tokens)
-      # here the second vocab is multivocab
-      multibucket, vocab = self.get_item(1)
-      tokens = [line[vocab.conll_idx] for line in sent]
-      idxs = [vocab.ROOT] + [vocab.index(token, self.name+"-"+str(sid)+"-"+str(wid)) for wid, token in enumerate(tokens)]
-      multibucket.add(idxs, tokens)
-      for i in range(2, len(self)):
-        multibucket, vocab = self.get_item(i)
-        tokens = [line[vocab.conll_idx] for line in sent]
-        idxs = [vocab.ROOT] + [vocab.index(token) for token in tokens]
-        multibucket.add(idxs, tokens)
-      """
-    for multibucket in self:
-      multibucket.close()
-    self._multibucket = Multibucket.from_dataset(self)
+    if self.data_form == 'tree':
+      print ('### Data form: tree ###')
+      self.bucket4tree()
+    elif self.data_form == 'graph':
+      print ('### Data form: graph ###')
+      self.bucket4graph()
+
     return
-  
+
   #=============================================================
   def __call__(self, moving_params=None):
     """"""
@@ -114,6 +86,52 @@ class Dataset(Configurable):
     return self._nlp_model(self.vocabs, ts_lstm=self.ts_lstm, arc_placeholder=self.arc_placeholder,
                             stacked_cnn=self.stacked_cnn ,moving_params=moving_params)
   
+  #=============================================================
+  def bucket4tree(self):
+    with Bucketer.from_configurable(self, self.n_buckets, name='bucketer-%s'%self.name) as bucketer:
+      splits = bucketer.compute_splits(len(sent) for sent in self.iterfiles4tree())
+      for i in xrange(len(splits)):
+        splits[i] += 1
+    for multibucket, vocab in self.iteritems():
+      multibucket.open(splits, depth=vocab.depth)
+    for sid, sent in enumerate(self.iterfiles4tree()):
+      for i in xrange(len(self)):
+        multibucket, vocab = self.get_item(i)
+        tokens = [line[vocab.conll_idx] for line in sent]
+        if vocab.name == 'words':
+          idxs = [vocab.ROOT] + [vocab.index(token, self.name+"-"+str(sid)+"-"+str(wid)) for wid, token in enumerate(tokens)]
+        else:
+          idxs = [vocab.ROOT] + [vocab.index(token) for token in tokens]
+        multibucket.add(idxs, tokens)
+    for multibucket in self:
+      multibucket.close()
+    self._multibucket = Multibucket.from_dataset(self)
+    return
+
+  #=============================================================
+  def bucket4graph(self):
+    with Bucketer.from_configurable(self, self.n_buckets, name='bucketer-%s'%self.name) as bucketer:
+      splits = bucketer.compute_splits(len(sent) for sent in self.iterfiles4graph())
+      for i in xrange(len(splits)):
+        splits[i] += 1
+    for multibucket, vocab in self.iteritems():
+      multibucket.open(splits, depth=vocab.depth)
+    for sid, sent in enumerate(self.iterfiles4graph()):
+      print (sent)
+      for i in xrange(len(self)):
+        multibucket, vocab = self.get_item(i)
+        tokens = [line[vocab.conll_idx] for line in sent]
+        if vocab.name == 'words':
+          idxs = [vocab.ROOT] + [vocab.index(token, self.name+"-"+str(sid)+"-"+str(wid)) for wid, token in enumerate(tokens)]
+        else:
+          idxs = [vocab.ROOT] + [vocab.index(token) for token in tokens]
+        print (vocab.name, idxs)
+        multibucket.add(idxs, tokens)
+    for multibucket in self:
+      multibucket.close()
+    self._multibucket = Multibucket.from_dataset(self)
+    return
+
   #=============================================================
   def feed_arc(self, arc_probs, tokens_to_keep):
     max_len = arc_probs.shape[1]
@@ -130,7 +148,7 @@ class Dataset(Configurable):
     return feed_dict
 
   #=============================================================
-  def iterfiles(self):
+  def iterfiles4tree(self):
     """"""
     if self.name == "parseset":
       self._merge_lines = []
@@ -166,6 +184,36 @@ class Dataset(Configurable):
               buff = []
           yield buff
   
+  #=============================================================
+  # There is no [0-9]+[-.][0-9]+ in graphs
+  def iterfiles4graph(self):
+    """"""
+    self._merge_lines = []
+    for data_file in self.data_files:
+      with codecs.open(data_file, encoding='utf-8', errors='ignore') as f:
+        buff = []
+        id = 0
+        for line in f:
+          line = line.strip()
+          if line and not line.startswith('#'):
+            items = line.split('\t')
+            if not re.match('[0-9]+[-.][0-9]+', line):
+              if int(items[0]) == id:
+                buff[-1][6].append(items[6])
+                buff[-1][7].append(items[7])
+              else:
+                items[6] = [items[6]]
+                items[7] = [items[7]]
+                buff.append(items)
+                id = int(items[0])
+          elif buff:
+            id = 0
+            self.merge_lines.append({})
+            yield buff
+            buff = []
+        self.merge_lines.append({})
+        yield buff
+
   #=============================================================
   def iterbatches(self, shuffle=True, return_check=False):
     """"""
@@ -323,14 +371,15 @@ if __name__ == '__main__':
   dep_vocab = DepVocab.from_configurable(configurable)
   word_vocab = WordVocab.from_configurable(configurable)
   lemma_vocab = LemmaVocab.from_configurable(configurable)
-  pretrained_vocab = PretrainedVocab.from_vocab(word_vocab)
+  #pretrained_vocab = PretrainedVocab.from_vocab(word_vocab)
   char_vocab = NgramMultivocab.from_vocab(word_vocab)
-  word_multivocab = Multivocab.from_configurable(configurable, [word_vocab, pretrained_vocab, char_vocab], name='words')
+  word_multivocab = Multivocab.from_configurable(configurable, [word_vocab, char_vocab], name='words')
   tag_vocab = TagVocab.from_configurable(configurable)
   xtag_vocab = XTagVocab.from_configurable(configurable)
   head_vocab = HeadVocab.from_configurable(configurable)
   rel_vocab = RelVocab.from_configurable(configurable)
-  trainset = Trainset.from_configurable(configurable, [dep_vocab, word_multivocab, lemma_vocab, tag_vocab, xtag_vocab, head_vocab, rel_vocab])
+  trainset = Trainset.from_configurable(configurable, [dep_vocab, word_multivocab, lemma_vocab, tag_vocab, xtag_vocab, head_vocab, rel_vocab],
+                            True, False, None, None)
   trainset()
   print('Dataset passes')
   

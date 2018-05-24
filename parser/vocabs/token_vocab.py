@@ -153,6 +153,12 @@ class XTagVocab(TagVocab):
   _conll_idx = 4
 class RelVocab(TokenVocab):
   _conll_idx = 7
+  def index(self, token):
+    if isinstance(token, list):
+      return [super(RelVocab, self).index(tok) for tok in token]
+    else:
+      return super(RelVocab, self).index(token)
+    
 
 #***************************************************************
 if __name__ == '__main__':

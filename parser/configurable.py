@@ -179,6 +179,9 @@ class Configurable(object):
   @property
   def verbose(self):
     return self.getboolean('verbose')
+  @property
+  def data_form(self):
+    return self.get('data_form')
   
   #=============================================================
   # [Vocab]

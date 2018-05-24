@@ -88,3 +88,8 @@ class DepVocab(IndexVocab):
   _conll_idx = 0
 class HeadVocab(IndexVocab):
   _conll_idx = 6
+  def index(self, token):
+    if isinstance(token, list):
+      return [super(HeadVocab, self).index(tok) for tok in token]
+    else:
+      return super(HeadVocab, self).index(token)
