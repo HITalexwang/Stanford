@@ -337,6 +337,9 @@ class Configurable(object):
   @property
   def l2_norm(self):
     return self.getboolean('l2_norm')
+  @property
+  def l2_rate(self):
+    return self.getfloat('l2_rate')
   
   #=============================================================
   # [Dataset]
