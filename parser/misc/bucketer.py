@@ -86,13 +86,13 @@ class Bucketer(Configurable):
     old_splits = None
     i = 0
     if self.verbose:
-      print(color_pattern('Initial # of tokens in buckets:', str(self.size()), 'bright_red'))
+      print('### Initial # of tokens in buckets: {} ###'.format(str(self.size())))
     while self != old_splits:
       old_splits = list(self)
       self.recenter()
       i += 1
     if self.verbose:
-      print(color_pattern('Final # of tokens in buckets:', str(self.size()), 'bright_white'))
+      print('### Final # of tokens in buckets: {} ###'.format(str(self.size())))
     
     self.reindex()
     return self._splits

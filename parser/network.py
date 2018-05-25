@@ -63,7 +63,7 @@ class Network(Configurable):
       word_multivocab = Multivocab.from_configurable(self, [word_vocab], name=word_vocab.name)
       tag_vocab = TagVocab.from_configurable(self, initialize_zero=False)
     else:
-      print ("### Loading word vocab ###")
+      print ("### Data form: {} ###\n### Loading word vocab ###".format(self.data_form))
       word_vocab = WordVocab.from_configurable(self)
       word_vocabs = [word_vocab]
       #print ("word_vocab len: ", word_vocab.counts)

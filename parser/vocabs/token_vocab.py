@@ -155,7 +155,7 @@ class RelVocab(TokenVocab):
   _conll_idx = 7
   def index(self, token):
     if isinstance(token, list):
-      return [super(RelVocab, self).index(tok) for tok in token]
+      return [(int(tok[0]), super(RelVocab, self).index(tok[1])) for tok in token]
     else:
       return super(RelVocab, self).index(token)
     

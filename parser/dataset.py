@@ -70,10 +70,8 @@ class Dataset(Configurable):
 
     #print ("---dataset.py---after\n",nlp_model)
     if self.data_form == 'tree':
-      print ('### Data form: tree ###')
       self.bucket4tree()
     elif self.data_form == 'graph':
-      print ('### Data form: graph ###')
       self.bucket4graph()
 
     return
@@ -105,7 +103,7 @@ class Dataset(Configurable):
         multibucket.add(idxs, tokens)
     for multibucket in self:
       multibucket.close()
-    self._multibucket = Multibucket.from_dataset(self)
+    self._multibucket = Multibucket.from_dataset(self, data_form=self.data_form)
     return
 
   #=============================================================
@@ -115,21 +113,25 @@ class Dataset(Configurable):
       for i in xrange(len(splits)):
         splits[i] += 1
     for multibucket, vocab in self.iteritems():
-      multibucket.open(splits, depth=vocab.depth)
+        multibucket.open(splits, depth=vocab.depth, vocab_name=vocab.name)
     for sid, sent in enumerate(self.iterfiles4graph()):
-      print (sent)
+      #print (sent)
       for i in xrange(len(self)):
         multibucket, vocab = self.get_item(i)
         tokens = [line[vocab.conll_idx] for line in sent]
         if vocab.name == 'words':
           idxs = [vocab.ROOT] + [vocab.index(token, self.name+"-"+str(sid)+"-"+str(wid)) for wid, token in enumerate(tokens)]
+        elif vocab.name == 'heads':
+          idxs = [[vocab.ROOT]] + [vocab.index(token) for token in tokens]
+        elif vocab.name == 'rels':
+          idxs = [[(0, vocab.ROOT)]] + [vocab.index(token) for token in tokens]
         else:
           idxs = [vocab.ROOT] + [vocab.index(token) for token in tokens]
-        print (vocab.name, idxs)
+        #print (vocab.name, idxs)
         multibucket.add(idxs, tokens)
     for multibucket in self:
       multibucket.close()
-    self._multibucket = Multibucket.from_dataset(self)
+    self._multibucket = Multibucket.from_dataset(self, data_form=self.data_form)
     return
 
   #=============================================================
@@ -200,10 +202,10 @@ class Dataset(Configurable):
             if not re.match('[0-9]+[-.][0-9]+', line):
               if int(items[0]) == id:
                 buff[-1][6].append(items[6])
-                buff[-1][7].append(items[7])
+                buff[-1][7].append((items[6], items[7]))
               else:
+                items[7] = [(items[6], items[7])]
                 items[6] = [items[6]]
-                items[7] = [items[7]]
                 buff.append(items)
                 id = int(items[0])
           elif buff:

@@ -68,7 +68,7 @@ class Multibucket(Configurable):
     return self.placeholder
   
   #=============================================================
-  def open(self, maxlens, depth=None):
+  def open(self, maxlens, depth=None, vocab_name=None):
     """"""
     
     self._indices = [(0,0)]
@@ -76,7 +76,8 @@ class Multibucket(Configurable):
     self._len2idx = {}
     prevlen = -1
     for idx, maxlen in enumerate(maxlens):
-      self._buckets.append(Bucket.from_configurable(self, embed_model=self.embed_model, name='%s-%d' % (self.name, idx)).open(maxlen, depth=depth))
+      self._buckets.append(Bucket.from_configurable(self, embed_model=self.embed_model, 
+              name='%s-%d' % (self.name, idx)).open(maxlen, depth=depth, vocab_name=vocab_name))
       self._len2idx.update(zip(range(prevlen+1, maxlen+1), [idx]*(maxlen-prevlen)))
       prevlen = maxlen
     return self
@@ -119,7 +120,6 @@ class Multibucket(Configurable):
   @classmethod
   def from_dataset(cls, dataset, *args, **kwargs):
     """"""
-    
     multibucket = cls.from_configurable(dataset, *args, **kwargs)
     indices = []
     for multibucket_ in dataset:
@@ -131,7 +131,8 @@ class Multibucket(Configurable):
     multibucket._buckets = buckets
     if dataset.verbose:
       for bucket in multibucket:
-        print('Bucket {name} is {shape}'.format(name=bucket.name, shape=ctext(' x '.join(str(x) for x in bucket.indices.shape), 'bright_blue')))
+        print('### Bucket {name} is {shape} ###'.format(name=bucket.name, 
+              shape=' x '.join(str(x) for x in [bucket.indices.shape[0],bucket.indices.shape[1],bucket._depth])))
     return multibucket
   
   #=============================================================

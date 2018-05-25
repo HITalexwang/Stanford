@@ -38,6 +38,8 @@ class Bucket(Configurable):
     self._indices = []
     self._maxlen = 0
     self._depth = 1
+    self._is_matrix = False
+    self._vocab_name = None
     self._tokens = []
     if embed_model is not None:
       self._embed_model = embed_model.from_configurable(self, name=self.name)
@@ -53,16 +55,22 @@ class Bucket(Configurable):
     return self.embed_model(vocab, keep_prob=keep_prob, moving_params=moving_params)
   
   #=============================================================
-  def open(self, maxlen, depth=None):
+  def open(self, maxlen, depth=None, vocab_name=None):
     """"""
-    
-    if depth is None:
+    if self.data_form == 'graph' and vocab_name == 'heads':
+      self._indices = [[[0]]]
+    elif self.data_form == 'graph' and vocab_name == 'rels':
+      self._indices = [[[(0,0)]]]
+    elif depth is None:
       self._indices = [[0]]
     else:
       self._indices = [[[0]*depth]]
     self._tokens = [['']]
     self._maxlen = maxlen
     self._depth = depth
+    self._vocab_name = vocab_name
+    if vocab_name == 'rels' or vocab_name == 'heads':
+      self._is_matrix = True
     return self
   
   #=============================================================
@@ -88,8 +96,22 @@ class Bucket(Configurable):
   #=============================================================
   def close(self):
     """"""
-    
-    if self.depth is None:
+    #print (self.indices)
+    if self.data_form == 'graph' and self.vocab_name == 'heads':
+      indices = np.zeros((len(self.indices), len(self), len(self)), dtype=np.int32)
+      for i, sequence in enumerate(self.indices):
+        for j, idxs in enumerate(sequence):
+          for k in idxs:
+            indices[i,j,k] = 1
+      #print (indices)
+    elif self.data_form == 'graph' and self.vocab_name == 'rels':
+      indices = np.zeros((len(self.indices), len(self), len(self)), dtype=np.int32)
+      for i, sequence in enumerate(self.indices):
+        for j, idxs in enumerate(sequence):
+          for k,r in idxs:
+            indices[i,j,k] = r
+      #print (indices)
+    elif self.depth is None:
       indices = np.zeros((len(self.indices), len(self)), dtype=np.int32)
       for i, sequence in enumerate(self.indices):
         indices[i,0:len(sequence)] = sequence 
@@ -104,7 +126,7 @@ class Bucket(Configurable):
   @classmethod
   def from_dataset(cls, dataset, bkt_idx, *args, **kwargs):
     """"""
-    
+    data_form = kwargs['data_form']
     kwargs = dict(kwargs)
     kwargs['name'] = '{name}-{bkt_idx}'.format(name=dataset.name, bkt_idx=bkt_idx)
     bucket = cls.from_configurable(dataset, *args, **kwargs)
@@ -116,7 +138,10 @@ class Bucket(Configurable):
         indices[i] = indices[i][:,:,None]
     bucket._indices = np.concatenate(indices, axis=2)
     bucket._maxlen = bucket.indices.shape[1]
-    bucket._depth = bucket.indices.shape[2]
+    if data_form == 'graph':
+      bucket._depth = bucket.indices.shape[2] - bucket._maxlen * 2 + 2
+    else:
+      bucket._depth = bucket.indices.shape[2]
     return bucket
     
   #=============================================================
@@ -132,6 +157,12 @@ class Bucket(Configurable):
   @property
   def depth(self):
     return self._depth
+  @property
+  def is_matrix(self):
+    return self._is_matrix
+  @property
+  def vocab_name(self):
+    return self._vocab_name
   @property
   def placeholder(self):
     return self.embed_model.placeholder
