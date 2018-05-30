@@ -130,8 +130,9 @@ class BaseTagger(NN):
     tag_probs = [tag_prob for batch in probs for tag_prob in batch[0]]
     tokens_to_keep = [weight for batch in probs for weight in batch[1]]
     tokens = [sent for batch in sents for sent in batch]
-    
+    j = 0
     with codecs.open(output_file, 'w', encoding='utf-8', errors='ignore') as f:
+      print (inv_idxs)   
       for i in inv_idxs:
         sent, tag_prob, weights = tokens[i], tag_probs[i], tokens_to_keep[i]
         sent = zip(*sent)
@@ -143,7 +144,9 @@ class BaseTagger(NN):
           token.append('_')
           token[3] = self.vocabs['tags'][tag_pred]
           f.write('\t'.join(token)+'\n')
-        f.write('\n')
+        j += 1
+        if j < len(inv_idxs):
+          f.write('\n')
     return
   
   #=============================================================
