@@ -132,7 +132,6 @@ class BaseTagger(NN):
     tokens = [sent for batch in sents for sent in batch]
     j = 0
     with codecs.open(output_file, 'w', encoding='utf-8', errors='ignore') as f:
-      print (inv_idxs)   
       for i in inv_idxs:
         sent, tag_prob, weights = tokens[i], tag_probs[i], tokens_to_keep[i]
         sent = zip(*sent)
