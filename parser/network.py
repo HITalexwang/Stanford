@@ -205,7 +205,8 @@ class Network(Configurable):
             valid_accumulators = np.zeros(len(train_outputs))
             valid_time = 0
             with codecs.open(os.path.join(self.save_dir, 'sanity_check'), 'w', encoding='utf-8', errors='ignore') as f:
-              for feed_dict, sents in validset.iterbatches(return_check=True):
+              return_check = False if self.data_form == 'graph' else True
+              for feed_dict, sents in validset.iterbatches(return_check=return_check):
                 start_time = time.time()
                 batch_values = sess.run(valid_outputs+valid_outputs2, feed_dict=feed_dict)
                 batch_time = time.time() - start_time
@@ -289,12 +290,13 @@ class Network(Configurable):
     # partial_run() does not receive ops
     with tf.control_dependencies([train]):
       dummy_train = tf.constant(0)
-    train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
+    print (trainset.hinge_keys)
+    train_outputs = [train_tensors[hinge_key] for hinge_key in trainset.hinge_keys]
     saver = tf.train.Saver(self.save_vars, max_to_keep=1)
     validset = Parseset.from_configurable(self, self.vocabs, True, True, self.ts_lstm, self.stacked_cnn, nlp_model=self.nlp_model)
     with tf.variable_scope(self.name.title(), reuse=True):
       valid_tensors = validset(moving_params=self.optimizer)
-    valid_outputs = [valid_tensors[train_key] for train_key in validset.train_keys]
+    valid_outputs = [valid_tensors[hinge_key] for hinge_key in validset.hinge_keys]
     valid_outputs2 = [valid_tensors[valid_key] for valid_key in validset.valid_keys]
     current_acc = 0
     best_acc = 0
@@ -326,7 +328,7 @@ class Network(Configurable):
       if load:
         saver.restore(sess, tf.train.latest_checkpoint(self.save_dir))
       total_train_iters = sess.run(self.global_step)
-      train_accumulators = np.zeros(len(train_outputs))
+      train_accumulators = np.zeros(len(train_outputs[2:]))
       train_time = 0
       # training loop
       while total_train_iters < max_train_iters:
@@ -334,13 +336,11 @@ class Network(Configurable):
           start_time = time.time()
           #part = sess.partial_run_setup(train_outputs + [train_tensors['arc_losses'],train_tensors['arc_pred_scores'],train_tensors['arc_target_scores'],train_tensors['rel_pred_scores'],train_tensors['rel_target_scores']]+ [train_tensors['arc_probs'],train_tensors['tokens_to_keep']] + [dummy_train], 
           #                                [p for p in feed_dict] + [trainset.arc_placeholder])
-          part = sess.partial_run_setup(train_outputs + [train_tensors['arc_probs'],train_tensors['tokens_to_keep']] + [dummy_train], 
-                                          [p for p in feed_dict] + [trainset.arc_placeholder])
-          #arc_losses, arc_pred_scores, arc_target_scores, rel_pred_scores, rel_target_scores, arc_probs, tokens_to_keep = sess.partial_run(part, [train_tensors['arc_losses'],train_tensors['arc_pred_scores'],train_tensors['arc_target_scores'],train_tensors['rel_pred_scores'],train_tensors['rel_target_scores']] 
-          #                                              + [train_tensors['arc_probs'],train_tensors['tokens_to_keep']], feed_dict=feed_dict)
-          arc_probs, tokens_to_keep = sess.partial_run(part, [train_tensors['arc_probs'],train_tensors['tokens_to_keep']], feed_dict=feed_dict)
+          part = sess.partial_run_setup(train_outputs + [dummy_train], [p for p in feed_dict] + [trainset.arc_placeholder])
+          # Get arc_logits (or arc_probs) and tokens_to_keep first
+          arc_scores, tokens_to_keep = sess.partial_run(part, train_outputs[:2], feed_dict=feed_dict)
           #print ("(pred,target) arc:\n{}\narc loss:\n{}\n(pred,target) rel:\n{}\n\n{}\n".format(zip(arc_pred_scores, arc_target_scores), arc_losses, rel_pred_scores, rel_target_scores))
-          batch_values = sess.partial_run(part, train_outputs + [dummy_train], feed_dict=trainset.feed_arc(arc_probs, tokens_to_keep))[:-1]
+          batch_values = sess.partial_run(part, train_outputs[2:] + [dummy_train], feed_dict=trainset.feed_arc(arc_scores, tokens_to_keep))[:-1]
           #batch_values = sess.partial_run(part, train_outputs + [dummy_train])[:-1]
           #if batch_values[2] < 0:
           #  print ("loss:",batch_values[2])
@@ -352,26 +352,31 @@ class Network(Configurable):
           train_time += batch_time
           # possibly validate
           if total_train_iters == 1 or (total_train_iters % validate_every == 0):
-            valid_accumulators = np.zeros(len(train_outputs))
+            valid_accumulators = np.zeros(len(train_outputs[2:]))
             valid_time = 0
             with codecs.open(os.path.join(self.save_dir, 'sanity_check'), 'w', encoding='utf-8', errors='ignore') as f:
-              for feed_dict, sents in validset.iterbatches(return_check=True):
+              return_check = False if self.data_form == 'graph' else True
+              for batch in validset.iterbatches(return_check=return_check):
+                if self.data_form == 'graph':
+                  feed_dict = batch
+                else:
+                  feed_dict, sents = batch
                 start_time = time.time()
 
-                valid_part = sess.partial_run_setup(valid_outputs + [valid_outputs2[1]] + [valid_tensors['arc_probs'],valid_tensors['tokens_to_keep']], 
-                                          [p for p in feed_dict] + [validset.arc_placeholder])
-                arc_probs, tokens_to_keep = sess.partial_run(valid_part, [valid_tensors['arc_probs'],valid_tensors['tokens_to_keep']], feed_dict=feed_dict)
-                valid_arc_preds = validset.feed_arc(arc_probs, tokens_to_keep)
-                batch_values = sess.partial_run(valid_part, valid_outputs+[valid_outputs2[1]], feed_dict=valid_arc_preds)
+                valid_part = sess.partial_run_setup(valid_outputs + valid_outputs2[1:2], [p for p in feed_dict] + [validset.arc_placeholder])
+                arc_scores, tokens_to_keep = sess.partial_run(valid_part, valid_outputs[:2], feed_dict=feed_dict)
+                valid_arc_preds = validset.feed_arc(arc_scores, tokens_to_keep)
+                batch_values = sess.partial_run(valid_part, valid_outputs[2:]+valid_outputs2[1:2], feed_dict=valid_arc_preds)
 
                 #batch_values = sess.run(valid_outputs+valid_outputs2, feed_dict=feed_dict)
                 batch_time = time.time() - start_time
                 # update accumulators
-                valid_accumulators += batch_values[:len(valid_outputs)]
+                valid_accumulators += batch_values[:len(valid_outputs[2:])]
                 #valid_preds = batch_values[len(valid_outputs):]
-                valid_preds = [valid_arc_preds[validset.arc_placeholder]] + batch_values[len(valid_outputs):]
+                valid_preds = [valid_arc_preds.values()[0]] + batch_values[-1:]
                 valid_time += batch_time
-                validset.check(valid_preds, sents, f)
+                if self.data_form == 'tree':
+                  validset.check(valid_preds, sents, f)
             # update history
             trainset.update_history(self.history['train'], train_accumulators)
             current_acc = validset.update_history(self.history['valid'], valid_accumulators)

@@ -153,11 +153,24 @@ class XTagVocab(TagVocab):
   _conll_idx = 4
 class RelVocab(TokenVocab):
   _conll_idx = 7
+
+  #=============================================================
   def index(self, token):
     if isinstance(token, list):
       return [(int(tok[0]), super(RelVocab, self).index(tok[1])) for tok in token]
     else:
       return super(RelVocab, self).index(token)
+
+  #=============================================================
+  def generate_placeholder(self):
+    """"""
+
+    if self.placeholder is None:
+      if self.data_form == 'graph':
+        self.placeholder = tf.placeholder(tf.int32, shape=[None, None, None], name=self.name)
+      else:
+        self.placeholder = tf.placeholder(tf.int32, shape=[None, None], name=self.name)
+    return self.placeholder
     
 
 #***************************************************************

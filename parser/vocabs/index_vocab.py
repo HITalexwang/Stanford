@@ -88,8 +88,21 @@ class DepVocab(IndexVocab):
   _conll_idx = 0
 class HeadVocab(IndexVocab):
   _conll_idx = 6
+
+  #=============================================================
   def index(self, token):
     if isinstance(token, list):
       return [super(HeadVocab, self).index(tok) for tok in token]
     else:
       return super(HeadVocab, self).index(token)
+
+  #=============================================================
+  def generate_placeholder(self):
+    """"""
+
+    if self.placeholder is None:
+      if self.data_form == 'graph':
+        self.placeholder = tf.placeholder(tf.int32, shape=[None, None, None], name=self.name)
+      else:
+        self.placeholder = tf.placeholder(tf.int32, shape=[None, None], name=self.name)
+    return self.placeholder

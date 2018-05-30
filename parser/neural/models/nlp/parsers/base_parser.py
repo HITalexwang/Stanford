@@ -87,14 +87,19 @@ class BaseParser(NN):
   def process_accumulators(self, accumulators, time=None):
     """"""
     # 'n_tokens', 'n_seqs', 'loss', 'n_rel_correct', 'n_arc_correct', 'n_correct', 'n_seqs_correct'
-    n_tokens, n_seqs, loss, rel_corr, arc_corr, corr, seq_corr = accumulators
+    if self.data_form == 'tree':
+      n_tokens, n_seqs, loss, rel_corr, arc_corr, corr, seq_corr = accumulators
+    elif self.data_form == 'graph':
+      n_tokens, n_seqs, loss, rel_corr, arc_corr, corr = accumulators
+
     acc_dict = {
       'Loss': loss,
       'LS': rel_corr/n_tokens*100,
       'UAS': arc_corr/n_tokens*100,
       'LAS': corr/n_tokens*100,
-      'SS': seq_corr/n_seqs*100,
     }
+    if self.data_form == 'tree':
+      acc_dict['SS'] = seq_corr/n_seqs*100
     if time is not None:
       acc_dict.update({
         'Token_rate': n_tokens / time,
@@ -262,7 +267,10 @@ class BaseParser(NN):
   #=============================================================
   @property
   def hinge_keys(self):
-    return ('arc_probs', 'tokens_to_keep', 'n_tokens', 'n_seqs', 'loss', 'n_rel_correct', 'n_arc_correct', 'n_correct', 'n_seqs_correct')
+    if self.data_form == 'graph':
+      return ('arc_logits', 'tokens_to_keep', 'n_tokens', 'n_seqs', 'loss', 'n_rel_correct', 'n_arc_correct', 'n_correct')
+    else:
+      return ('arc_probs', 'tokens_to_keep', 'n_tokens', 'n_seqs', 'loss', 'n_rel_correct', 'n_arc_correct', 'n_correct', 'n_seqs_correct')
 
   #=============================================================
   @property
@@ -272,9 +280,15 @@ class BaseParser(NN):
   #=============================================================
   @property
   def parse_keys(self):
-    return ('arc_probs', 'rel_probs', 'tokens_to_keep')
+    if self.data_form == 'graph':
+      return ('arc_logits', 'rel_logits', 'tokens_to_keep')
+    else:
+      return ('arc_probs', 'rel_probs', 'tokens_to_keep')
 
   #=============================================================
   @property
   def ensemble_keys(self):
-    return ('arc_probs', 'rel_probs', 'tokens_to_keep', 'arc_logits', 'rel_logits')
+    if self.data_form == 'graph':
+      return ('arc_logits', 'rel_logits', 'tokens_to_keep')
+    else:
+      return ('arc_probs', 'rel_probs', 'tokens_to_keep', 'arc_logits', 'rel_logits')

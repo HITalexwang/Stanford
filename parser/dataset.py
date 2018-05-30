@@ -233,13 +233,6 @@ class Dataset(Configurable):
         elif batch_by == 'seqs':
           n_seqs = bucket.indices.shape[0]
           n_splits = max(n_seqs // batch_size, 1)
-      """
-      if shuffle:
-        range_func = np.random.permutation
-      else:
-        range_func = np.arange
-      splits = np.array_split(range_func(bucket.indices.shape[0])[1:], n_splits)
-      """
       splits = np.array_split(np.arange(bucket.indices.shape[0])[1:], n_splits)
       if shuffle:
         np.random.shuffle(splits)
@@ -254,26 +247,22 @@ class Dataset(Configurable):
       for multibucket, vocab in self.iteritems():
         bucket = multibucket[bkt_idx]
         indices = bucket.indices[batch]
+        print (vocab.name, batch, '\n', indices)
         vocab.set_feed_dict(indices, feed_dict)
         if vocab.name == 'positions': continue
         if return_check:
           if len(indices.shape) == 2:
             tokens.append(vocab[indices])
           elif len(indices.shape) == 3:
-            #tokens.extend([subvocab[indices[:,:,i]] for i, subvocab in enumerate(vocab)])
-            # TODO This is super hacky
-            #if hasattr(subvocab, 'idx2tok'):
-              #tokens[-1] = [[subvocab.idx2tok.get(idx, subvocab[subvocab.PAD]) for idx in idxs] for idxs in indices[:,:,-1]]
-
             for i, subvocab in enumerate(vocab):
               # subtoken vocab
               if hasattr(subvocab, 'idx2tok'):
                 tokens.append([[subvocab.idx2tok.get(idx, subvocab[subvocab.PAD]) for idx in idxs] for idxs in indices[:,:,i]])
               else:
                 tokens.append(subvocab[indices[:,:,i]])
-                
         elif not shuffle:
           tokens.append(bucket.get_tokens(batch))
+      print (tokens)
       if not shuffle or return_check:
         yield feed_dict, zip(*tokens)
       else:
@@ -319,6 +308,9 @@ class Dataset(Configurable):
   @property
   def train_keys(self):
     return self._nlp_model.train_keys
+  @property
+  def hinge_keys(self):
+    return self._nlp_model.hinge_keys
   @property
   def valid_keys(self):
     return self._nlp_model.valid_keys
