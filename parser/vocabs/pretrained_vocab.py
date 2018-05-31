@@ -48,7 +48,7 @@ class PretrainedVocab(BaseVocab):
     self._token_vocab = token_vocab
     
     self.load()
-    self.count()
+    #self.count()
     return
   
   #=============================================================
