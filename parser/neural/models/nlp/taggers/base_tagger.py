@@ -123,27 +123,32 @@ class BaseTagger(NN):
     return
 
   #=============================================================
-  def write_probs(self, sents, output_file, probs, inv_idxs):
+  def write_probs(self, sents, output_file, probs, inv_idxs, merge_lines):
     """"""
     
     # Turns list of tuples of tensors into list of matrices
     tag_probs = [tag_prob for batch in probs for tag_prob in batch[0]]
     tokens_to_keep = [weight for batch in probs for weight in batch[1]]
     tokens = [sent for batch in sents for sent in batch]
-    
+    j = 0
     with codecs.open(output_file, 'w', encoding='utf-8', errors='ignore') as f:
       for i in inv_idxs:
         sent, tag_prob, weights = tokens[i], tag_probs[i], tokens_to_keep[i]
         sent = zip(*sent)
         tag_preds = np.argmax(tag_prob, axis=1)
+        merge_line = merge_lines[j]
         for token, tag_pred, weight in zip(sent, tag_preds[1:], weights[1:]):
           token = list(token)
+          if (int(token[0]) in merge_line.keys()):
+            f.write(merge_line[int(token[0])]+'\n')
           token.insert(5, '_')
           token.append('_')
           token.append('_')
           token[3] = self.vocabs['tags'][tag_pred]
           f.write('\t'.join(token)+'\n')
-        f.write('\n')
+        j += 1
+        if j < len(inv_idxs):
+          f.write('\n')
     return
   
   #=============================================================
