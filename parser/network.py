@@ -290,7 +290,6 @@ class Network(Configurable):
     # partial_run() does not receive ops
     with tf.control_dependencies([train]):
       dummy_train = tf.constant(0)
-    print (trainset.hinge_keys)
     train_outputs = [train_tensors[hinge_key] for hinge_key in trainset.hinge_keys]
     saver = tf.train.Saver(self.save_vars, max_to_keep=1)
     validset = Parseset.from_configurable(self, self.vocabs, True, True, self.ts_lstm, self.stacked_cnn, nlp_model=self.nlp_model)
@@ -334,20 +333,21 @@ class Network(Configurable):
       while total_train_iters < max_train_iters:
         for feed_dict in trainset.iterbatches():
           start_time = time.time()
-          #part = sess.partial_run_setup(train_outputs + [train_tensors['arc_losses'],train_tensors['arc_pred_scores'],train_tensors['arc_target_scores'],train_tensors['rel_pred_scores'],train_tensors['rel_target_scores']]+ [train_tensors['arc_probs'],train_tensors['tokens_to_keep']] + [dummy_train], 
-          #                                [p for p in feed_dict] + [trainset.arc_placeholder])
-          part = sess.partial_run_setup(train_outputs + [dummy_train], [p for p in feed_dict] + [trainset.arc_placeholder])
+          part = sess.partial_run_setup(train_outputs + [train_tensors['pred_scores_'],train_tensors['target_scores_']] + [dummy_train], 
+                                          [p for p in feed_dict] + [trainset.arc_placeholder])
+          #part = sess.partial_run_setup(train_outputs + [dummy_train], [p for p in feed_dict] + [trainset.arc_placeholder])
           # Get arc_logits (or arc_probs) and tokens_to_keep first
-          arc_scores, tokens_to_keep = sess.partial_run(part, train_outputs[:2], feed_dict=feed_dict)
-          #print ("(pred,target) arc:\n{}\narc loss:\n{}\n(pred,target) rel:\n{}\n\n{}\n".format(zip(arc_pred_scores, arc_target_scores), arc_losses, rel_pred_scores, rel_target_scores))
-          batch_values = sess.partial_run(part, train_outputs[2:] + [dummy_train], feed_dict=trainset.feed_arc(arc_scores, tokens_to_keep))[:-1]
-          #batch_values = sess.partial_run(part, train_outputs + [dummy_train])[:-1]
+          arc_scores, tokens_to_keep, aps, ats = sess.partial_run(part, train_outputs[:2]+ [train_tensors['pred_scores_'],train_tensors['target_scores_']], feed_dict=feed_dict)
+          batch_values = sess.partial_run(part, train_outputs[2:] + [dummy_train])[:-1]
           #if batch_values[2] < 0:
           #  print ("loss:",batch_values[2])
           batch_time = time.time() - start_time
           # update accumulators
           total_train_iters += 1
           n_iters_since_improvement += 1
+          print (arc_scores, '\n\npred score:\n', aps, '\n\ntar score:\n', ats )
+          print ("loss:{},rel_cor:{},arc_cor:{},cor:{},n_gold:{},n_pred:{}".format(batch_values[2],batch_values[3],batch_values[4],
+            batch_values[5],batch_values[6],batch_values[7]))
           train_accumulators += batch_values
           train_time += batch_time
           # possibly validate
@@ -385,7 +385,7 @@ class Network(Configurable):
               print('{0:6d}'.format(int(total_train_iters))+')') 
               trainset.print_accuracy(train_accumulators, train_time)
               validset.print_accuracy(valid_accumulators, valid_time)
-            train_accumulators = np.zeros(len(train_outputs))
+            train_accumulators = np.zeros(len(train_outputs[2:]))
             train_time = 0
             if current_acc > best_acc:
               if verbose:

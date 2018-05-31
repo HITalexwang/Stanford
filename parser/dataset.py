@@ -247,7 +247,7 @@ class Dataset(Configurable):
       for multibucket, vocab in self.iteritems():
         bucket = multibucket[bkt_idx]
         indices = bucket.indices[batch]
-        print (vocab.name, batch, '\n', indices)
+        #print (vocab.name, batch, '\n', indices)
         vocab.set_feed_dict(indices, feed_dict)
         if vocab.name == 'positions': continue
         if return_check:
@@ -262,7 +262,6 @@ class Dataset(Configurable):
                 tokens.append(subvocab[indices[:,:,i]])
         elif not shuffle:
           tokens.append(bucket.get_tokens(batch))
-      print (tokens)
       if not shuffle or return_check:
         yield feed_dict, zip(*tokens)
       else:

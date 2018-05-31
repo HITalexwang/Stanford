@@ -90,16 +90,35 @@ class BaseParser(NN):
     if self.data_form == 'tree':
       n_tokens, n_seqs, loss, rel_corr, arc_corr, corr, seq_corr = accumulators
     elif self.data_form == 'graph':
-      n_tokens, n_seqs, loss, rel_corr, arc_corr, corr = accumulators
+      n_tokens, n_seqs, loss, rel_corr, arc_corr, corr, n_gold_arcs, n_pred_arcs = accumulators
 
-    acc_dict = {
-      'Loss': loss,
-      'LS': rel_corr/n_tokens*100,
-      'UAS': arc_corr/n_tokens*100,
-      'LAS': corr/n_tokens*100,
-    }
     if self.data_form == 'tree':
-      acc_dict['SS'] = seq_corr/n_seqs*100
+      acc_dict = {
+        'Loss': loss,
+        'LS': rel_corr/n_tokens*100,
+        'UAS': arc_corr/n_tokens*100,
+        'LAS': corr/n_tokens*100,
+        'SS': seq_corr/n_seqs*100
+      }
+    elif self.data_form == 'graph':
+      if n_pred_arcs == 0:
+        n_pred_arcs += 1
+      acc_dict = {
+        'Loss': loss,
+        'UP': arc_corr/n_pred_arcs*100,
+        'UR': arc_corr/n_gold_arcs*100,
+        'LP': corr/n_pred_arcs*100,
+        'LR': corr/n_gold_arcs*100
+      }
+      if acc_dict['UP'] + acc_dict['UR'] == 0:
+        acc_dict['UF'] = 0
+      else:
+        acc_dict['UF'] = 2 * acc_dict['UP'] * acc_dict['UR'] / (acc_dict['UP'] + acc_dict['UR'])
+      if acc_dict['LP'] + acc_dict['LR'] == 0:
+        acc_dict['LF'] = 0
+      else:
+        acc_dict['LF'] = 2 * acc_dict['LP'] * acc_dict['LR'] / (acc_dict['LP'] + acc_dict['LR'])
+      
     if time is not None:
       acc_dict.update({
         'Token_rate': n_tokens / time,
@@ -114,7 +133,10 @@ class BaseParser(NN):
     acc_dict = self.process_accumulators(accumulators)
     for key, value in acc_dict.iteritems():
       history[key].append(value)
-    return history['LAS'][-1]
+    if self.data_form == 'tree':
+      return history['LAS'][-1]
+    elif self.data_form == 'graph':
+      return history['LF'][-1]
   
   #=============================================================
   def print_accuracy(self, accumulators, time, prefix='Train'):
@@ -123,10 +145,18 @@ class BaseParser(NN):
     acc_dict = self.process_accumulators(accumulators, time=time)
     strings = []
     strings.append('Loss: {Loss:7.3f}')
-    strings.append('LS: {LS:5.2f}%')
-    strings.append('UAS: {UAS:5.2f}%')
-    strings.append('LAS: {LAS:5.2f}%')
-    strings.append('SS: {SS:5.2f}%')
+    if self.data_form == 'tree':
+      strings.append('LS: {LS:5.2f}%')
+      strings.append('UAS: {UAS:5.2f}%')
+      strings.append('LAS: {LAS:5.2f}%')
+      strings.append('SS: {SS:5.2f}%')
+    elif self.data_form == 'graph':
+      strings.append('UP: {UP:5.2f}%')
+      strings.append('UR: {UR:5.2f}%')
+      strings.append('UF: {UF:5.2f}%')
+      strings.append('LP: {LP:5.2f}%')
+      strings.append('LR: {LR:5.2f}%')
+      strings.append('LF: {LF:5.2f}%')
     strings.append('Speed: {Seq_rate:6.1f} seqs/sec')
     string = '{0}  ' + ' | '.join(strings)
     print(string.format(prefix, **acc_dict))
@@ -268,7 +298,7 @@ class BaseParser(NN):
   @property
   def hinge_keys(self):
     if self.data_form == 'graph':
-      return ('arc_logits', 'tokens_to_keep', 'n_tokens', 'n_seqs', 'loss', 'n_rel_correct', 'n_arc_correct', 'n_correct')
+      return ('sum_logits', 'tokens_to_keep', 'n_tokens', 'n_seqs', 'loss', 'n_rel_correct', 'n_arc_correct', 'n_correct', 'n_arc_targets', 'n_arc_preds')
     else:
       return ('arc_probs', 'tokens_to_keep', 'n_tokens', 'n_seqs', 'loss', 'n_rel_correct', 'n_arc_correct', 'n_correct', 'n_seqs_correct')
 

@@ -235,29 +235,16 @@ class Parser(BaseParser):
     with tf.variable_scope('Arc'):
       # (n x b x d) * (d x 1 x d) * (n x b x d).T -> (n x b x b)
       arc_logits = self.bilinear(arc_dep_mlp, arc_head_mlp, 1, add_bias2=False)
-      # (n x b x b)
-      # arc_probs = tf.nn.softmax(arc_logits)
       # (n x b x b) of 0/1
       arc_targets = self.vocabs['heads'].placeholder
+      n_arc_targets = tf.reduce_sum(tf.reduce_sum(arc_targets, axis=2) * int_tokens_to_keep)
 
-      # (n x b x b)
-      arc_preds = tf.to_int32(tf.greater(arc_logits, 0))
-      #arc_preds = arc_placeholder
-      # (n x b x b)
-      arc_correct_ = tf.to_int32(tf.equal(arc_preds, arc_targets))
-      # (n x b)
-      arc_correct = tf.reduce_sum(arc_correct_, axis=2) * int_tokens_to_keep
-      #arc_preds_scores = tf.reshape(tf.boolean_mask(arc_logits, arc_preds_onehot), [self.batch_size, self.bucket_size])
-      arc_preds_scores = tf.reduce_max(arc_logits * tf.to_float(arc_preds), axis=2) * self.tokens_to_keep
-      #arc_targets_scores = tf.reshape(tf.boolean_mask(arc_logits, arc_targets), [self.batch_size, self.bucket_size])
-      arc_targets_scores = tf.reduce_sum(arc_logits * tf.to_float(arc_targets), axis=2)
+      #arc_preds_scores = tf.reduce_sum(arc_logits * tf.to_float(arc_preds), axis=2) * self.tokens_to_keep
+      arc_target_scores_ = tf.reduce_sum(arc_logits * tf.to_float(arc_targets), axis=2) * self.tokens_to_keep
       # (n)
-      arc_pred_scores = tf.reduce_sum(arc_preds_scores, axis=1)
-      arc_target_scores = tf.reduce_sum(arc_targets_scores, axis=1)
-      # (n)
-      arc_losses = tf.subtract(arc_pred_scores, arc_target_scores)
+      arc_target_scores = tf.reduce_sum(arc_target_scores_, axis=1)
       # ()
-      arc_loss = tf.reduce_sum(arc_losses)
+      #arc_loss = tf.reduce_sum(arc_losses)
       # (n x b)
       #masked_margin = tf.to_float(tf.not_equal(masked_arc_preds, masked_arc_targets))
       # (n)
@@ -274,6 +261,18 @@ class Parser(BaseParser):
       # (n x b x b x r)
       #rel_probs = tf.nn.softmax(rel_logits, dim=3)
 
+      # Sum up scores of the arc and best label on it
+      # (n x b x b)
+      sum_logits = arc_logits + tf.reduce_max(rel_logits, axis=3)
+      # (n x b x b)
+      #arc_preds = arc_placeholder
+      arc_preds = tf.to_int32(tf.greater(sum_logits, 0))
+      n_arc_preds = tf.reduce_sum(tf.reduce_sum(arc_preds, axis=2) * int_tokens_to_keep)
+      # (n x b x b)
+      arc_correct_ = tf.to_int32(tf.equal(arc_preds, arc_targets)) * arc_targets
+      # (n x b)
+      arc_correct = tf.reduce_sum(arc_correct_, axis=2) * int_tokens_to_keep
+
       # Max label index of each possible arc (n x b x b)
       rel_idxs = tf.to_int32(tf.argmax(rel_logits, axis=3))
       # (n x b x b)
@@ -281,23 +280,23 @@ class Parser(BaseParser):
       # (n x b x b)
       rel_targets = self.vocabs['rels'].placeholder
       # (n x b x b)
-      rel_correct_ = tf.to_int32(tf.equal(rel_preds, rel_targets))
+      rel_correct_ = tf.to_int32(tf.equal(rel_preds, rel_targets)) * arc_targets
       # (n x b)
       rel_correct = tf.reduce_sum(rel_correct_, axis=2) * int_tokens_to_keep
-      # (n x b)
-      rel_pred_scores = tf.reduce_sum(tf.reduce_max(rel_logits, axis=3) * tf.to_float(arc_preds), axis=2) * self.tokens_to_keep
+
       n_rels = tf.shape(rel_logits)[3]
       # (n x b x b x r)
       onehot = tf.one_hot(rel_targets, n_rels)
       # (n x b)
-      rel_target_scores = tf.reduce_sum(tf.reduce_sum(rel_logits * onehot, axis=3), axis=2) * self.tokens_to_keep
+      rel_target_scores_ = tf.reduce_sum(tf.reduce_sum(rel_logits * onehot, axis=3), axis=2) * self.tokens_to_keep
       # (n)
-      rel_pred_scores = tf.reduce_sum(rel_pred_scores, axis=1)
-      rel_target_scores = tf.reduce_sum(rel_target_scores, axis=1)
+      rel_target_scores = tf.reduce_sum(rel_target_scores_, axis=1)
+      # (n x b)
+      pred_scores_ = tf.reduce_sum(sum_logits * tf.to_float(arc_preds), axis=2) * self.tokens_to_keep
       # (n)
-      rel_losses = tf.subtract(rel_pred_scores, rel_target_scores)
-      # ()
-      rel_loss = tf.reduce_sum(rel_losses)
+      pred_scores = tf.reduce_sum(pred_scores_, axis=1)
+      target_scores_ = arc_target_scores_ + rel_target_scores_
+      target_scores = tf.reduce_sum(target_scores_, axis=1)
     
     n_arc_correct = tf.reduce_sum(arc_correct)
     n_rel_correct = tf.reduce_sum(rel_correct)
@@ -307,7 +306,7 @@ class Parser(BaseParser):
     #n_seqs_correct = tf.reduce_sum(tf.to_int32(tf.equal(tf.reduce_sum(correct, axis=1), self.sequence_lengths-1)))
 
     # (n)
-    losses = arc_losses + rel_losses + 1
+    losses = pred_scores - target_scores + 1
     loss = tf.reduce_sum(tf.maximum(losses, 0))
     #loss = tf.reduce_sum(losses)
     tf.losses.add_loss(loss)
@@ -319,20 +318,23 @@ class Parser(BaseParser):
       tf.losses.add_loss(self.l2_rate * tf.add_n(l2_losses))
 
     outputs = {
+      'pred_scores_': pred_scores_,
+      'target_scores_': target_scores_,
+      'sum_logits': sum_logits,
       'arc_logits': arc_logits,
-      #'arc_probs': arc_probs,
       'arc_preds': arc_preds,
       'arc_targets': arc_targets,
       'arc_correct': arc_correct,
-      'arc_loss': arc_loss,
+      #'arc_loss': arc_loss,
       'n_arc_correct': n_arc_correct,
+      'n_arc_targets': n_arc_targets,
+      'n_arc_preds': n_arc_preds,
       
       'rel_logits': rel_logits,
-      #'rel_probs': rel_probs,
       'rel_preds': rel_preds,
       'rel_targets': rel_targets,
       'rel_correct': rel_correct,
-      'rel_loss': rel_loss,
+      #'rel_loss': rel_loss,
       'n_rel_correct': n_rel_correct,
       
       'n_tokens': self.n_tokens,
