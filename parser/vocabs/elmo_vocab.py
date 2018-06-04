@@ -102,7 +102,10 @@ class ElmoVocab(BaseVocab):
       print ("### Loading ELMo for testset from {}! ###".format(self.elmo_file))
       with h5py.File(self.elmo_file, 'r') as f:
         for sid, sent in enumerate(self.iter_sents(self.files)):
-          elmo = f['\t'.join(sent)].value
+          sent_ = '\t'.join(sent)
+          if sent_ == '.':
+            sent_ = '\t'
+          elmo = f[sent_].value
           assert(len(elmo) == len(sent))
           embeddings.extend(elmo)
           for wid in xrange(len(sent)):
@@ -114,7 +117,10 @@ class ElmoVocab(BaseVocab):
         print ("### Loading ELMo for trainset from {}! ###".format(self.filename))
         with h5py.File(self.filename, 'r') as f:
           for sid, sent in enumerate(self.iter_sents(self.train_files)):
-            elmo = f['\t'.join(sent)].value
+            sent_ = '\t'.join(sent)
+            if sent_ == '.':
+              sent_ = '\t'
+            elmo = f[sent_].value
             assert(len(elmo) == len(sent))
             embeddings.extend(elmo)
             for wid in xrange(len(sent)):
