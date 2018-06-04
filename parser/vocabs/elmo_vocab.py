@@ -49,7 +49,7 @@ class ElmoVocab(BaseVocab):
     self._files = files
 
     self.load()
-    self.count()
+    #self.count()
     return
   
   #=============================================================
