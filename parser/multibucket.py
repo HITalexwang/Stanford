@@ -131,7 +131,7 @@ class Multibucket(Configurable):
     multibucket._buckets = buckets
     if dataset.verbose:
       for bucket in multibucket:
-        print('Bucket {name} is {shape}'.format(name=bucket.name, shape=ctext(' x '.join(str(x) for x in bucket.indices.shape), 'bright_blue')))
+        print('### Bucket {name} is {shape} ###'.format(name=bucket.name, shape=' x '.join(str(x) for x in bucket.indices.shape)))
     return multibucket
   
   #=============================================================
