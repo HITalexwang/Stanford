@@ -36,8 +36,12 @@ class RNNEmbed(BaseEmbed):
     # (n x b x d)
     embeddings = super(RNNEmbed, self).__call__(vocab, **kwargs)
     # (n x b x d) -> (n x b x h)
-    with tf.variable_scope('RNN'):
-      recur, state = self.RNN(embeddings, self.recur_size)
+    recur = embeddings
+    for i in xrange(self.n_layers):
+      with tf.variable_scope('RNN%d' % i):
+        recur, state = self.RNN(recur, self.recur_size)
+    #with tf.variable_scope('RNN'):
+      #recur, state = self.RNN(embeddings, self.recur_size)
     if self.rnn_func == rnn.birnn:
       state_fw, state_bw = tf.unstack(state)
       state_fw = tf.split(state_fw, 2, axis=1)[0]

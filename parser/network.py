@@ -104,9 +104,6 @@ class Network(Configurable):
     self._global_step = tf.Variable(0., trainable=False, name='global_step')
     self._global_epoch = tf.Variable(0., trainable=False, name='global_epoch')
     self._optimizer = RadamOptimizer.from_configurable(self, global_step=self.global_step)
-    self._ts_lstm = None
-    if self.use_tslstm:
-      self._ts_lstm = TS_LSTM.from_configurable(self)
     return
   
   #=============================================================
@@ -128,13 +125,13 @@ class Network(Configurable):
     
     # prep the configurables
     self.add_file_vocabs(self.parse_files)
-    trainset = Trainset.from_configurable(self, self.vocabs, True, self.ts_lstm, nlp_model=self.nlp_model)
+    trainset = Trainset.from_configurable(self, self.vocabs, True, nlp_model=self.nlp_model)
     with tf.variable_scope(self.name.title()):
       train_tensors = trainset()
     train = self.optimizer(tf.losses.get_total_loss())
     train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
     saver = tf.train.Saver(self.save_vars, max_to_keep=1)
-    validset = Parseset.from_configurable(self, self.vocabs, True, self.ts_lstm, nlp_model=self.nlp_model)
+    validset = Parseset.from_configurable(self, self.vocabs, True, nlp_model=self.nlp_model)
     with tf.variable_scope(self.name.title(), reuse=True):
       valid_tensors = validset(moving_params=self.optimizer)
     valid_outputs = [valid_tensors[train_key] for train_key in validset.train_keys]
@@ -267,7 +264,7 @@ class Network(Configurable):
     self.add_file_vocabs(input_files)
     
     # load the model and prep the parse set
-    trainset = Trainset.from_configurable(self, self.vocabs, False, self.ts_lstm, nlp_model=self.nlp_model)
+    trainset = Trainset.from_configurable(self, self.vocabs, False, nlp_model=self.nlp_model)
     with tf.variable_scope(self.name.title()):
       train_tensors = trainset()
     train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
@@ -286,7 +283,7 @@ class Network(Configurable):
       # Iterate through files and batches
       for input_file in input_files:
         #parseset = Parseset.from_configurable(trainset, self.vocabs, parse_files=input_file, nlp_model=self.nlp_model)
-        parseset = Parseset.from_configurable(trainset, self.vocabs, True, self.ts_lstm, parse_files=input_file, nlp_model=self.nlp_model)
+        parseset = Parseset.from_configurable(trainset, self.vocabs, True, parse_files=input_file, nlp_model=self.nlp_model)
         with tf.variable_scope(self.name.title(), reuse=True):
           parse_tensors = parseset(moving_params=self.optimizer)
         parse_outputs = [parse_tensors[parse_key] for parse_key in parseset.parse_keys]
@@ -323,7 +320,7 @@ class Network(Configurable):
     self.add_file_vocabs(input_files)
     
     # load the model and prep the parse set
-    trainset = Trainset.from_configurable(self, self.vocabs, False, self.ts_lstm, nlp_model=self.nlp_model)
+    trainset = Trainset.from_configurable(self, self.vocabs, False, nlp_model=self.nlp_model)
     with tf.variable_scope(self.name.title()):
       train_tensors = trainset()
     train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
@@ -340,7 +337,7 @@ class Network(Configurable):
       
       # Iterate through files and batches
       for input_file in input_files:
-        parseset = Parseset.from_configurable(trainset, self.vocabs, True, self.ts_lstm, parse_files=input_file, nlp_model=self.nlp_model)
+        parseset = Parseset.from_configurable(trainset, self.vocabs, True, parse_files=input_file, nlp_model=self.nlp_model)
         with tf.variable_scope(self.name.title(), reuse=True):
           parse_tensors = parseset(moving_params=self.optimizer)
         ensemble_outputs = [parse_tensors[ensemble_key] for ensemble_key in parseset.ensemble_keys]
@@ -404,10 +401,6 @@ class Network(Configurable):
   @property
   def global_epoch(self):
     return self._global_epoch
-  @property
-  def ts_lstm(self):
-    return self._ts_lstm
-  
 
 #***************************************************************
 if __name__ == '__main__':

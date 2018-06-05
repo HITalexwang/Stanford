@@ -29,10 +29,10 @@ class Parser(BaseParser):
   """"""
   
   #=============================================================
-  def __call__(self, vocabs, ts_lstm, moving_params=None):
+  def __call__(self, vocabs, moving_params=None):
     """"""
     
-    top_recur = super(Parser, self).__call__(vocabs, ts_lstm, moving_params=moving_params)
+    top_recur = super(Parser, self).__call__(vocabs, moving_params=moving_params)
     int_tokens_to_keep = tf.to_int32(self.tokens_to_keep)
     
     with tf.variable_scope('MLP'):

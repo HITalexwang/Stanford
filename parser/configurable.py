@@ -334,15 +334,6 @@ class Configurable(object):
   @property
   def n_buckets(self):
     return self.getint('n_buckets')
-  
-  #=============================================================
-  # [TS_LSTM]
-  @property
-  def window_size(self):
-    return self.getint('window_size')
-  @property
-  def time_stride(self):
-    return self.getint('time_stride')
 
   #=============================================================
   # [Network]
