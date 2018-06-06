@@ -179,6 +179,57 @@ class BaseTagger(NN):
     return
   
   #=============================================================
+  def write_probs_ensemble(self, sents, output_file, multi_probs, inv_idxs, sum_type, merge_lines, sum_weights=None):
+    """"""
+
+    # Turns list of tuples of tensors into list of matrices
+    multi_tag_probs = []
+    multi_xtag_probs = []
+    multi_tokens_to_keep = []
+    for probs in multi_probs:
+      # Turns list of tuples of tensors into list of matrices
+      multi_tag_probs.append([tag_prob for batch in probs for tag_prob in batch[0]])
+      multi_tokens_to_keep.append([weight for batch in probs for weight in batch[1]])
+      if 'xtags' in self.output_vocabs:
+        multi_xtag_probs.append([xtag_prob for batch in probs for xtag_prob in batch[2]])
+    tokens = [sent for batch in sents for sent in batch]
+
+    j = 0
+    with codecs.open(output_file, 'w', encoding='utf-8', errors='ignore') as f:
+      for i in inv_idxs:
+        #sent, tag_prob, weights = tokens[i], tag_probs[i], tokens_to_keep[i]
+        weights = multi_tokens_to_keep[0][i]
+        sent = tokens[i]
+        sent = zip(*sent)
+        tag_prob = multi_tag_probs[0][i]
+        for n in range(1,len(multi_tag_probs)):
+          tag_prob += multi_tag_probs[n][i]
+        tag_preds = np.argmax(tag_prob, axis=1)
+        xtag_preds = np.zeros(len(tag_preds))
+        if 'xtags' in self.output_vocabs:
+          xtag_prob = multi_xtag_probs[0][i]
+          for n in range(1,len(multi_xtag_probs)):
+            xtag_prob += multi_xtag_probs[n][i]
+          #xtag_prob = xtag_probs[i]
+          xtag_preds = np.argmax(xtag_prob, axis=1)
+        merge_line = merge_lines[j]
+        for token, tag_pred, xtag_pred, weight in zip(sent, tag_preds[1:], xtag_preds[1:], weights[1:]):
+          token = list(token)
+          if (int(token[0]) in merge_line.keys()):
+            f.write(merge_line[int(token[0])]+'\n')
+          token.insert(5, '_')
+          token.append('_')
+          token.append('_')
+          token[3] = self.vocabs['tags'][tag_pred]
+          if 'xtags' in self.output_vocabs:
+            token[4] = self.vocabs['xtags'][xtag_pred]
+          f.write('\t'.join(token)+'\n')
+        j += 1
+        if j < len(inv_idxs):
+          f.write('\n')
+    return
+
+  #=============================================================
   @property
   def train_keys(self):
     if 'xtags' in self.output_vocabs:
@@ -201,3 +252,8 @@ class BaseTagger(NN):
       return ('tags_probs', 'tokens_to_keep', 'xtags_probs')
     else:
       return ('tags_probs', 'tokens_to_keep')
+
+  #=============================================================
+  @property
+  def ensemble_keys(self):
+    return self.parse_keys
