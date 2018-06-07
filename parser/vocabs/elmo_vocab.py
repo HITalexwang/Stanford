@@ -141,79 +141,13 @@ class ElmoVocab(BaseVocab):
     try:
       embeddings = np.stack(embeddings)
       embeddings = np.pad(embeddings, ( (len(self.special_tokens),0), (0,0) ), 'constant')
-      self.embeddings = np.stack(embeddings)
+      #self.embeddings = np.stack(embeddings)
+      self._elmo_embeddings = np.stack(embeddings)
+      self.embed_placeholder = tf.placeholder(tf.float32, shape=[None, None])
     except:
       shapes = set([embedding.shape for embedding in embeddings])
       raise ValueError("Couldn't stack embeddings with shapes in %s" % shapes)
     return
-
-  """
-  #=============================================================
-  def load(self):
-    """"""
-    
-    embeddings = []
-    cur_idx = len(self.special_tokens)
-    max_rank = self.max_rank
-    sid = 0
-    wid = 0
-    if self.filename:
-      print ("### Loading ELMo for trainset from {}! ###".format(self.filename))
-      if self.filename.endswith('.xz'):
-        open_func = lzma.open
-      else:
-        open_func = codecs.open
-      with open_func(self.filename, 'rb') as f:
-        reader = codecs.getreader('utf-8')(f, errors='ignore')
-        if self.skip_header == True:
-          reader.readline()
-        for line_num, line in enumerate(reader):
-          if (not max_rank) or line_num < max_rank:
-            line = line.rstrip().split(' ')
-            if len(line) > 1:
-              embeddings.append(np.array(line[1:], dtype=np.float32))
-              self["trainset-"+str(sid)+"-"+str(wid)] = cur_idx
-              wid += 1
-              cur_idx += 1
-            else:
-              sid += 1
-              wid = 0
-          else:
-            break
-    sid = 0
-    wid = 0
-    if self.parse_filename:
-      print ("### Loading ELMo for parseset from {}! ###".format(self.parse_filename))
-      if self.parse_filename.endswith('.xz'):
-        open_func = lzma.open
-      else:
-        open_func = codecs.open
-      with open_func(self.parse_filename, 'rb') as f:
-        reader = codecs.getreader('utf-8')(f, errors='ignore')
-        if self.skip_header == True:
-          reader.readline()
-        for line_num, line in enumerate(reader):
-          if (not max_rank) or line_num < max_rank:
-            line = line.rstrip().split(' ')
-            if len(line) > 1:
-              embeddings.append(np.array(line[1:], dtype=np.float32))
-              self["parseset-"+str(sid)+"-"+str(wid)] = cur_idx
-              wid += 1
-              cur_idx += 1
-            else:
-              sid += 1
-              wid = 0
-          else:
-            break
-    try:
-      embeddings = np.stack(embeddings)
-      embeddings = np.pad(embeddings, ( (len(self.special_tokens),0), (0,0) ), 'constant')
-      self.embeddings = np.stack(embeddings)
-    except:
-      shapes = set([embedding.shape for embedding in embeddings])
-      raise ValueError("Couldn't stack embeddings with shapes in %s" % shapes)
-    return
-  """
 
   #=============================================================
   def count(self):
@@ -234,12 +168,26 @@ class ElmoVocab(BaseVocab):
     return self._tok2idx.get(token, self.UNK)
 
   #=============================================================
+  def set_feed_dict(self, data, feed_dict):
+    """"""
+    
+    feed_dict[self.placeholder] = data
+    feed_dict[self.embed_placeholder] = self.elmo_embeddings
+    return
+
+  #=============================================================
   @property
   def token_vocab(self):
     return self._token_vocab
   @property
   def token_embed_size(self):
     return (self.token_vocab or self).embed_size
+  @property
+  def embed_placeholder(self):
+    return self._embed_placeholder
+  @property
+  def elmo_embeddings(self):
+    return self._elmo_embeddings
   @property
   def embeddings(self):
     return super(ElmoVocab, self).embeddings
@@ -248,7 +196,8 @@ class ElmoVocab(BaseVocab):
     self._embed_size = matrix.shape[1]
     with tf.device('/cpu:0'):
       with tf.variable_scope(self.name.title()):
-        self._embeddings = tf.Variable(matrix, name='Embeddings', trainable=False)
+        self._embeddings = tf.Variable(embed_placeholder, name='Embeddings', trainable=False)
+        #self._embeddings = tf.Variable(matrix, name='Embeddings', trainable=False)
     return
   @property
   def elmo_file(self):
