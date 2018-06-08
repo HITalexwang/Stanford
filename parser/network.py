@@ -82,6 +82,7 @@ class Network(Configurable):
         else:
           elmo_vocab = ElmoVocab.from_vocab(word_vocab, None, None)
         word_vocabs.append(elmo_vocab)
+        self._elmo_vocab = elmo_vocab
         #word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab, elmo_vocab, subtoken_vocab], name=word_vocab.name)
       #else:
         #word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab, subtoken_vocab], name=word_vocab.name)
@@ -162,7 +163,10 @@ class Network(Configurable):
     else:
       config_proto.gpu_options.per_process_gpu_memory_fraction = self.per_process_gpu_memory_fraction
     with tf.Session(config=config_proto) as sess:
-      sess.run(tf.global_variables_initializer())
+      if self.use_elmo:
+        sess.run(tf.global_variables_initializer(), feed_dict={self.elmo_vocab.embed_placeholder:self.elmo_vocab.elmo_embeddings})
+      else:
+        sess.run(tf.global_variables_initializer())
       if load:
         saver.restore(sess, tf.train.latest_checkpoint(self.save_dir))
       total_train_iters = sess.run(self.global_step)
@@ -277,7 +281,10 @@ class Network(Configurable):
       config_proto.gpu_options.per_process_gpu_memory_fraction = self.per_process_gpu_memory_fraction
     with tf.Session(config=config_proto) as sess:
       for var in self.non_save_vars:
-        sess.run(var.initializer)
+        if var.name.startswith('Elmo'):
+          sess.run(var.initializer, feed_dict={self.elmo_vocab.embed_placeholder:self.elmo_vocab.elmo_embeddings})
+        else:
+          sess.run(var.initializer)
       saver.restore(sess, tf.train.latest_checkpoint(self.save_dir))
       
       # Iterate through files and batches
@@ -333,8 +340,11 @@ class Network(Configurable):
       config_proto.gpu_options.per_process_gpu_memory_fraction = self.per_process_gpu_memory_fraction
     with tf.Session(config=config_proto) as sess:
       for var in self.non_save_vars:
-        sess.run(var.initializer)
-      
+        if var.name.startswith('Elmo'):
+          sess.run(var.initializer, feed_dict={self.elmo_vocab.embed_placeholder:self.elmo_vocab.elmo_embeddings})
+        else:
+          sess.run(var.initializer)
+ 
       # Iterate through files and batches
       for input_file in input_files:
         parseset = Parseset.from_configurable(trainset, self.vocabs, True, parse_files=input_file, nlp_model=self.nlp_model)
@@ -401,6 +411,9 @@ class Network(Configurable):
   @property
   def global_epoch(self):
     return self._global_epoch
+  @property
+  def elmo_vocab(self):
+    return self._elmo_vocab
 
 #***************************************************************
 if __name__ == '__main__':

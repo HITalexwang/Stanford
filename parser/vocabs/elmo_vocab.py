@@ -143,7 +143,9 @@ class ElmoVocab(BaseVocab):
       embeddings = np.pad(embeddings, ( (len(self.special_tokens),0), (0,0) ), 'constant')
       #self.embeddings = np.stack(embeddings)
       self._elmo_embeddings = np.stack(embeddings)
-      self.embed_placeholder = tf.placeholder(tf.float32, shape=[None, None])
+      shape = self.elmo_embeddings.shape
+      self._embed_placeholder = tf.placeholder(tf.float32, shape=[shape[0], shape[1]])
+      self.embeddings = self.elmo_embeddings
     except:
       shapes = set([embedding.shape for embedding in embeddings])
       raise ValueError("Couldn't stack embeddings with shapes in %s" % shapes)
@@ -168,14 +170,6 @@ class ElmoVocab(BaseVocab):
     return self._tok2idx.get(token, self.UNK)
 
   #=============================================================
-  def set_feed_dict(self, data, feed_dict):
-    """"""
-    
-    feed_dict[self.placeholder] = data
-    feed_dict[self.embed_placeholder] = self.elmo_embeddings
-    return
-
-  #=============================================================
   @property
   def token_vocab(self):
     return self._token_vocab
@@ -196,7 +190,7 @@ class ElmoVocab(BaseVocab):
     self._embed_size = matrix.shape[1]
     with tf.device('/cpu:0'):
       with tf.variable_scope(self.name.title()):
-        self._embeddings = tf.Variable(embed_placeholder, name='Embeddings', trainable=False)
+        self._embeddings = tf.Variable(self.embed_placeholder, name='Embeddings', trainable=False)
         #self._embeddings = tf.Variable(matrix, name='Embeddings', trainable=False)
     return
   @property
