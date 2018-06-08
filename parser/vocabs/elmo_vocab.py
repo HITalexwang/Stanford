@@ -103,8 +103,7 @@ class ElmoVocab(BaseVocab):
       with h5py.File(self.elmo_file, 'r') as f:
         for sid, sent in enumerate(self.iter_sents(self.files)):
           sent_ = '\t'.join(sent)
-          if sent_ == '.':
-            sent_ = '\t'
+          sent_ = sent_.replace('/', '$backslash$').replace('.', '$period$')
           elmo = f[sent_].value
           assert(len(elmo) == len(sent))
           embeddings.extend(elmo)
@@ -118,8 +117,7 @@ class ElmoVocab(BaseVocab):
         with h5py.File(self.filename, 'r') as f:
           for sid, sent in enumerate(self.iter_sents(self.train_files)):
             sent_ = '\t'.join(sent)
-            if sent_ == '.':
-              sent_ = '\t'
+            sent_ = sent_.replace('/', '$backslash$').replace('.', '$period$')
             elmo = f[sent_].value
             assert(len(elmo) == len(sent))
             embeddings.extend(elmo)
@@ -131,7 +129,9 @@ class ElmoVocab(BaseVocab):
         print ("### Loading ELMo for parseset from {}! ###".format(self.parse_filename))
         with h5py.File(self.parse_filename, 'r') as f:
           for sid, sent in enumerate(self.iter_sents(self.parse_files)):
-            elmo = f['\t'.join(sent)].value
+            sent_ = '\t'.join(sent)
+            sent_ = sent_.replace('/', '$backslash$').replace('.', '$period$')
+            elmo = f[sent_].value
             assert(len(elmo) == len(sent))
             embeddings.extend(elmo)
             for wid in xrange(len(sent)):
