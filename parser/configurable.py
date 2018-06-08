@@ -344,6 +344,9 @@ class Configurable(object):
   def max_train_iters(self):
     return self.getint('max_train_iters')
   @property
+  def min_save_iters(self):
+    return self.getint('min_save_iters')
+  @property
   def print_every(self):
     return self.getint('print_every')
   @property

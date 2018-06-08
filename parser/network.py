@@ -145,6 +145,7 @@ class Network(Configurable):
     # calling these properties is inefficient so we save them in separate variables
     min_train_iters = self.min_train_iters
     max_train_iters = self.max_train_iters
+    min_save_iters = self.min_save_iters
     validate_every = self.validate_every
     save_every = self.save_every
     verbose = self.verbose
@@ -207,7 +208,7 @@ class Network(Configurable):
               validset.print_accuracy(valid_accumulators, valid_time)
             train_accumulators = np.zeros(len(train_outputs))
             train_time = 0
-            if current_acc > best_acc:
+            if current_acc > best_acc and total_train_iters > min_save_iters:
               if verbose:
                 print('Saving model...')
               best_acc = current_acc
