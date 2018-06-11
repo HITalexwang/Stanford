@@ -231,31 +231,7 @@ class Network(Configurable):
           sess.run(self.global_epoch.assign_add(1.))
           continue
         break
-      # Now parse the training and testing files
-      """
-      input_files = self.train_files + self.parse_files
-      saver.restore(sess, tf.train.latest_checkpoint(self.save_dir))
-      for input_file in input_files:
-        parseset = Parseset.from_configurable(self, self.vocabs, True, parse_files=input_file, nlp_model=self.nlp_model)
-        with tf.variable_scope(self.name.title(), reuse=True):
-          parse_tensors = parseset(moving_params=self.optimizer)
-        parse_outputs = [parse_tensors[parse_key] for parse_key in parseset.parse_keys]
-
-        input_dir, input_file = os.path.split(input_file)
-        output_dir = self.save_dir
-        output_file = input_file
-        
-        start_time = time.time()
-        probs = []
-        sents = []
-        for feed_dict, tokens in parseset.iterbatches(shuffle=False):
-          probs.append(sess.run(parse_outputs, feed_dict=feed_dict))
-          sents.append(tokens)
-        parseset.write_probs(sents, os.path.join(output_dir, output_file), probs)
-        
-    if self.verbose:
-      print('Parsing {0} file(s) took {1} seconds'.format(len(input_files), time.time()-start_time))
-    """
+    print ("### Finish Training! ###")
     return
   
   #=============================================================
