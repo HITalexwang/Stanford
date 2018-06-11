@@ -228,7 +228,6 @@ class Network(Configurable):
                        write_meta_graph=False)
             with open(os.path.join(self.save_dir, 'history.pkl'), 'w') as f:
               pkl.dump(dict(self.history), f)
-          sess.run(self.global_epoch.assign_add(1.))
           continue
         break
     print ("### Finish Training! ###")
