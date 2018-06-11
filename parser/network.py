@@ -150,6 +150,7 @@ class Network(Configurable):
     save_every = self.save_every
     verbose = self.verbose
     quit_after_n_iters_without_improvement = self.quit_after_n_iters_without_improvement
+    cpu_count = self.cpu_count
     
     # load or prep the history
     if load:
@@ -158,7 +159,7 @@ class Network(Configurable):
       self.history = {'train': defaultdict(list), 'valid': defaultdict(list)}
     
     # start up the session
-    config_proto = tf.ConfigProto()
+    config_proto = tf.ConfigProto(device_count={"CPU": cpu_count})
     if self.per_process_gpu_memory_fraction == -1:
       config_proto.gpu_options.allow_growth = True
     else:
@@ -250,7 +251,7 @@ class Network(Configurable):
     train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
 
     saver = tf.train.Saver(self.save_vars, max_to_keep=1)
-    config_proto = tf.ConfigProto()
+    config_proto = tf.ConfigProto(device_count={"CPU": self.cpu_count})
     if self.per_process_gpu_memory_fraction == -1:
       config_proto.gpu_options.allow_growth = True
     else:
@@ -309,7 +310,7 @@ class Network(Configurable):
     train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
 
     saver = tf.train.Saver(self.save_vars, max_to_keep=1)
-    config_proto = tf.ConfigProto()
+    config_proto = tf.ConfigProto(device_count={"CPU": self.cpu_count})
     if self.per_process_gpu_memory_fraction == -1:
       config_proto.gpu_options.allow_growth = True
     else:

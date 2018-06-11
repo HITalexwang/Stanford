@@ -365,6 +365,9 @@ class Configurable(object):
   def quit_after_n_iters_without_improvement(self):
     return self.getint('quit_after_n_iters_without_improvement')
   @property
+  def cpu_count(self):
+    return self.getint('cpu_count')
+  @property
   def per_process_gpu_memory_fraction(self):
     return self.getfloat('per_process_gpu_memory_fraction')
   @property
