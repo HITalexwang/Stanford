@@ -420,6 +420,9 @@ class Configurable(object):
   def use_pretrained(self):
     return self.getboolean('use_pretrained')
   @property
+  def use_char(self):
+    return self.getboolean('use_char')
+  @property
   def use_position(self):
     return self.getboolean('use_position')
   @property
