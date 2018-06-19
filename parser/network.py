@@ -87,10 +87,11 @@ class Network(Configurable):
       #else:
         #word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab, subtoken_vocab], name=word_vocab.name)
 
-      print ("### Loading subtoken vocab ###")
-      #self.subtoken_vocab here = CharVocab
-      subtoken_vocab = self.subtoken_vocab.from_vocab(word_vocab)
-      word_vocabs.append(subtoken_vocab)
+      if (self.use_char):
+        print ("### Loading subtoken vocab ###")
+        #self.subtoken_vocab here = CharVocab
+        subtoken_vocab = self.subtoken_vocab.from_vocab(word_vocab)
+        word_vocabs.append(subtoken_vocab)
 
       word_multivocab = Multivocab.from_configurable(self, word_vocabs, name=word_vocab.name)
       #word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab], name=word_vocab.name)
