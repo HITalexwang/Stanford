@@ -62,8 +62,10 @@ class Tagger(BaseTagger):
     
     n_tags_correct = tf.reduce_sum(tags_correct)
     n_tags_seqs_correct = tf.reduce_sum(tf.to_int32(tf.equal(tf.reduce_sum(tags_correct, axis=1), self.sequence_lengths-1)))
-    n_xtags_correct = tf.reduce_sum(xtags_correct)
-    n_xtags_seqs_correct = tf.reduce_sum(tf.to_int32(tf.equal(tf.reduce_sum(xtags_correct, axis=1), self.sequence_lengths-1)))
+    if 'xtags' in self.output_vocabs:
+      with tf.variable_scope('XTag'):
+        n_xtags_correct = tf.reduce_sum(xtags_correct)
+        n_xtags_seqs_correct = tf.reduce_sum(tf.to_int32(tf.equal(tf.reduce_sum(xtags_correct, axis=1), self.sequence_lengths-1)))
     
     outputs = {
       'tags_logits': tags_logits,
@@ -73,19 +75,20 @@ class Tagger(BaseTagger):
       'tags_correct': tags_correct,
       'n_tags_correct': n_tags_correct,
       'n_tags_seqs_correct': n_tags_seqs_correct,
-
-      'xtags_logits': xtags_logits,
-      'xtags_probs': xtags_probs,
-      'xtags_preds': xtags_preds,
-      'xtags_targets': xtags_targets,
-      'xtags_correct': xtags_correct,
-      'n_xtags_correct': n_xtags_correct,
-      'n_xtags_seqs_correct': n_xtags_seqs_correct,
       
       'loss': loss,
       'n_tokens': self.n_tokens,
       'n_seqs': self.batch_size,
       'tokens_to_keep': self.tokens_to_keep
     }
+
+    if 'xtags' in self.output_vocabs:
+      outputs.update({'xtags_logits': xtags_logits,
+      'xtags_probs': xtags_probs,
+      'xtags_preds': xtags_preds,
+      'xtags_targets': xtags_targets,
+      'xtags_correct': xtags_correct,
+      'n_xtags_correct': n_xtags_correct,
+      'n_xtags_seqs_correct': n_xtags_seqs_correct})
     
     return outputs

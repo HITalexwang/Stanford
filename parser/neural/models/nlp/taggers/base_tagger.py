@@ -243,7 +243,7 @@ class BaseTagger(NN):
     if 'xtags' in self.output_vocabs:
       return ('tags_preds', 'xtags_preds')
     else:
-      return ('tags_preds')
+      return ('tags_preds', )
 
   #=============================================================
   @property
