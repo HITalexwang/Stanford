@@ -102,7 +102,8 @@ class Network(Configurable):
     xtag_vocab = XTagVocab.from_configurable(self)
     head_vocab = HeadVocab.from_configurable(self)
     rel_vocab = RelVocab.from_configurable(self)
-    self._vocabs = [dep_vocab, word_multivocab, lemma_vocab, tag_vocab, xtag_vocab, head_vocab, rel_vocab]
+    feat_vocab = FeatVocab.from_configurable(self)
+    self._vocabs = [dep_vocab, word_multivocab, lemma_vocab, tag_vocab, xtag_vocab, feat_vocab, head_vocab, rel_vocab]
     self._global_step = tf.Variable(0., trainable=False, name='global_step')
     self._global_epoch = tf.Variable(0., trainable=False, name='global_epoch')
     self._optimizer = RadamOptimizer.from_configurable(self, global_step=self.global_step)

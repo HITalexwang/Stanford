@@ -165,7 +165,7 @@ class BaseParser(NN):
           # add the merge line
           if (int(token[0]) in merge_line.keys()):
           	f.write(merge_line[int(token[0])]+'\n')
-          token.insert(5, '_')
+          #token.insert(5, '_')
           token.append('_')
           token.append('_')
           token[6] = self.vocabs['heads'][arc_pred]
@@ -233,7 +233,7 @@ class BaseParser(NN):
           # add the merge line
           if (int(token[0]) in merge_line.keys()):
           	f.write(merge_line[int(token[0])]+'\n')
-          token.insert(5, '_')
+          #token.insert(5, '_')
           token.append('_')
           token.append('_')
           token[6] = self.vocabs['heads'][arc_pred]

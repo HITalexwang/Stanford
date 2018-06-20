@@ -1,4 +1,5 @@
 from index_vocab import IndexVocab, DepVocab, HeadVocab
+from str_vocab import StrVocab, FeatVocab
 from pretrained_vocab import PretrainedVocab
 from elmo_vocab import ElmoVocab
 from token_vocab import TokenVocab, WordVocab, LemmaVocab, TagVocab, XTagVocab, RelVocab
@@ -16,6 +17,8 @@ __all__ = [
   'LemmaVocab',
   'TagVocab',
   'XTagVocab',
+  'StrVocab',
+  'FeatVocab',
   'RelVocab',
   'CharVocab',
   'NgramVocab',
