@@ -62,9 +62,13 @@ class Network(Configurable):
       word_multivocab = Multivocab.from_configurable(self, [word_vocab], name=word_vocab.name)
       tag_vocab = TagVocab.from_configurable(self, initialize_zero=False)
     else:
+      word_vocabs = []
       print ("### Loading word vocab ###")
       word_vocab = WordVocab.from_configurable(self)
-      word_vocabs = [word_vocab]
+      if (self.use_self_update_word):
+        word_vocabs.append(word_vocab)
+      else:
+        print ("### Not using self update word embeddings! ###")
       #print ("word_vocab len: ", word_vocab.counts)
       if (self.use_pretrained):
         print ("### Loading pretrained vocab ###")
@@ -92,7 +96,7 @@ class Network(Configurable):
         #self.subtoken_vocab here = CharVocab
         subtoken_vocab = self.subtoken_vocab.from_vocab(word_vocab)
         word_vocabs.append(subtoken_vocab)
-
+      print ("### Word multivocab length:{} ###".format(len(word_vocabs)))
       word_multivocab = Multivocab.from_configurable(self, word_vocabs, name=word_vocab.name)
       #word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab], name=word_vocab.name)
       tag_vocab = TagVocab.from_configurable(self)
@@ -103,6 +107,7 @@ class Network(Configurable):
     head_vocab = HeadVocab.from_configurable(self)
     rel_vocab = RelVocab.from_configurable(self)
     feat_vocab = FeatVocab.from_configurable(self)
+
     self._vocabs = [dep_vocab, word_multivocab, lemma_vocab, tag_vocab, xtag_vocab, feat_vocab, head_vocab, rel_vocab]
     self._global_step = tf.Variable(0., trainable=False, name='global_step')
     self._global_epoch = tf.Variable(0., trainable=False, name='global_epoch')

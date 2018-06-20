@@ -379,6 +379,9 @@ class Configurable(object):
   @property
   def use_char(self):
     return self.getboolean('use_char')
+  @property
+  def use_self_update_word(self):
+    return self.getboolean('use_self_update_word')
   
   #=============================================================
   # [Zipf / Bucketer]

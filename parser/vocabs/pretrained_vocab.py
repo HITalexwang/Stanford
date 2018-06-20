@@ -44,7 +44,7 @@ class PretrainedVocab(BaseVocab):
     """"""
     
     super(PretrainedVocab, self).__init__(*args, **kwargs)
-    
+    self._conll_idx = 1
     self._token_vocab = token_vocab
     
     self.load()
@@ -114,6 +114,9 @@ class PretrainedVocab(BaseVocab):
     return
   
   #=============================================================
+  @property
+  def conll_idx(self):
+    return self._conll_idx
   @property
   def token_vocab(self):
     return self._token_vocab

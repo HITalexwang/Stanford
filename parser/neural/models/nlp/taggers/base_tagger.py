@@ -50,7 +50,10 @@ class BaseTagger(NN):
     for vocab in self.vocabs.values():
       if vocab not in input_vocabs:
         vocab.generate_placeholder()
-    placeholder = self.vocabs['words'].placeholder
+    if 'words' in self.vocabs:
+      placeholder = self.vocabs['words'].placeholder
+    else:
+      placeholder = self.vocabs['tags'].placeholder
     if len(placeholder.get_shape().as_list()) == 3:
       placeholder = placeholder[:,:,0]
     self._tokens_to_keep = tf.to_float(tf.greater(placeholder, self.ROOT))

@@ -54,7 +54,10 @@ class BaseParser(NN):
     for vocab in self.vocabs.values():
       if vocab not in input_vocabs:
         vocab.generate_placeholder()
-    placeholder = self.vocabs['words'].placeholder
+    if 'words' in self.vocabs:
+      placeholder = self.vocabs['words'].placeholder
+    else:
+      placeholder = self.vocabs['tags'].placeholder
     #print ("base_parser.py(__call__):placeholder:",placeholder.get_shape())
     #exit()
     if len(placeholder.get_shape().as_list()) == 3:
