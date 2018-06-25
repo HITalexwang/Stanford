@@ -292,13 +292,16 @@ class BaseParser(NN):
   #=============================================================
   @property
   def train_keys(self):
-    return ('n_tokens', 'n_seqs', 'loss', 'n_rel_correct', 'n_arc_correct', 'n_correct', 'n_seqs_correct')
+    if self.data_form == 'graph':
+      return ('n_tokens', 'n_seqs', 'loss', 'n_rel_correct', 'n_arc_correct', 'n_correct')
+    else:
+      return ('n_tokens', 'n_seqs', 'loss', 'n_rel_correct', 'n_arc_correct', 'n_correct', 'n_seqs_correct')
   
   #=============================================================
   @property
   def hinge_keys(self):
     if self.data_form == 'graph':
-      return ('sum_logits', 'tokens_to_keep', 'n_tokens', 'n_seqs', 'loss', 'n_rel_correct', 'n_arc_correct', 'n_correct', 'n_arc_targets', 'n_arc_preds')
+      return ('arc_preds', 'tokens_to_keep', 'n_tokens', 'n_seqs', 'loss', 'n_rel_correct', 'n_arc_correct', 'n_correct', 'n_arc_targets', 'n_arc_preds')
     else:
       return ('arc_probs', 'tokens_to_keep', 'n_tokens', 'n_seqs', 'loss', 'n_rel_correct', 'n_arc_correct', 'n_correct', 'n_seqs_correct')
 
