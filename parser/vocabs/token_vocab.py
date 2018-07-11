@@ -76,7 +76,8 @@ class TokenVocab(BaseVocab):
             line = line.strip()
             if line and not line.startswith('#'):
               line = line.split('\t')
-              assert len(line) == 10
+              if not self.data_type == 'sem15':
+                assert len(line) == 10
               token = line[self.conll_idx]
               if not self.cased:
                 token = token.lower()
@@ -151,6 +152,15 @@ class TagVocab(TokenVocab):
   _conll_idx = 3
 class XTagVocab(TagVocab):
   _conll_idx = 4
+
+  #=============================================================
+  @property
+  def conll_idx(self):
+    if self.data_type == 'sem15':
+      return 3
+    else:
+      return 4
+
 class RelVocab(TokenVocab):
   _conll_idx = 7
 
@@ -171,7 +181,32 @@ class RelVocab(TokenVocab):
       else:
         self.placeholder = tf.placeholder(tf.int32, shape=[None, None], name=self.name)
     return self.placeholder
-    
+  
+  #=============================================================
+  def count(self, conll_files=None):
+    """""" 
+    if not self.data_type == 'sem15':
+      super(RelVocab, self).count()
+      return
+    if conll_files is None:
+      conll_files = self.train_files
+    #print ("token_vocab, count, self.train_files: ", self.train_files)
+    for conll_file in conll_files:
+      #print ("token_vocab count : %s"%(conll_file))
+      with codecs.open(conll_file, encoding='utf-8', errors='ignore') as f:
+        for line_num, line in enumerate(f):
+          try:
+            line = line.strip()
+            if line and not line.startswith('#'):
+              line = line.split('\t')
+              for token in line[7:]:
+                if token == '_': continue
+                if not self.cased:
+                  token = token.lower()
+                self.counts[token] += 1
+          except:
+            raise ValueError('File %s is misformatted at line %d' % (conll_file, line_num+1))
+    return
 
 #***************************************************************
 if __name__ == '__main__':

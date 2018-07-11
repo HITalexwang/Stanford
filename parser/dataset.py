@@ -114,7 +114,8 @@ class Dataset(Configurable):
         splits[i] += 1
     for multibucket, vocab in self.iteritems():
         multibucket.open(splits, depth=vocab.depth, vocab_name=vocab.name)
-    for sid, sent in enumerate(self.iterfiles4graph()):
+    iter = self.iterfiles4sem15() if self.data_type == 'sem15' else self.iterfiles4graph() 
+    for sid, sent in enumerate(iter):
       #print (sent)
       for i in xrange(len(self)):
         multibucket, vocab = self.get_item(i)
@@ -213,8 +214,50 @@ class Dataset(Configurable):
             self.merge_lines.append({})
             yield buff
             buff = []
-        self.merge_lines.append({})
-        yield buff
+        #self.merge_lines.append({})
+        #yield buff
+
+  #=============================================================
+  def iterfiles4sem15(self):
+    """"""
+    self._merge_lines = []
+    for data_file in self.data_files:
+      with codecs.open(data_file, encoding='utf-8', errors='ignore') as f:
+        buff, args, tops, sent = [], [], [], []
+        for line in f:
+          line = line.strip()
+          if line and not line.startswith('#'):
+            items = line.split('\t')
+            if not re.match('[0-9]+[-.][0-9]+', line):
+              buff.append(items)
+              if items[4] == '+':
+                tops.append(items[0])
+              if items[5] == '+':
+                args.append(items[0])
+          elif buff:
+            self.merge_lines.append({})
+            sent = []
+            for idx, items in enumerate(buff):
+              prefix = items[:4]+['_',items[6]]
+              line_ = []
+              if str(idx+1) in tops:
+                line_ = prefix+[['0'], [('0', 'root')], '_', '_']
+              for head_idx, rel in enumerate(items[7:]):
+                if not rel == '_':
+                  head = args[head_idx]
+                  if not line_:
+                    line_ = prefix+[[head], [(head, rel)], '_', '_']
+                  else:
+                    line_[6].append(head)
+                    line_[7].append((head, rel))
+              # for tokens with no head
+              if not line_:
+                line_ = prefix+[[],[],'_','_']
+              sent.append(line_)
+            yield sent
+            buff, args, tops, sent = [], [], [], []
+        #self.merge_lines.append({})
+        #yield sent
 
   #=============================================================
   def iterbatches(self, shuffle=True, return_check=False):

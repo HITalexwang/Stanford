@@ -240,7 +240,7 @@ class BaseParser(NN):
     rel_preds = [rel_prob for batch in probs for rel_prob in batch[1]]
     tokens_to_keep = [weight for batch in probs for weight in batch[2]]
     tokens = [sent for batch in sents for sent in batch]
-    
+
     with codecs.open(output_file, 'w', encoding='utf-8', errors='ignore') as f:
       j = 0
       for i in inv_idxs:
@@ -248,18 +248,33 @@ class BaseParser(NN):
         sent = zip(*sent)
         sequence_length = int(np.sum(weights))+1
         arc_pred = arc_pred[:sequence_length][:,:sequence_length]
-
+        #print (rel_pred)
         #for token, arc_pred, rel_pred, weight in zip(sent, arc_preds[1:], rel_preds[1:], weights[1:]):
-        for m in range(1,sequence_length):
-          for n in range(0, sequence_length):
-            if arc_pred[m][n] > 0:
-              token = list(sent[m-1])
-              token.insert(5, '_')
-              token.append('_')
-              token.append('_')
-              token[6] = self.vocabs['heads'][n]
-              token[7] = self.vocabs['rels'][rel_pred[m][n]]
-              f.write('\t'.join(token)+'\n')
+        if self.data_type == 'sem15':
+          tops, args = [], []
+          for m in range(1,sequence_length):
+            if arc_pred[m][0] > 0:
+                tops.append(m)
+            for n in range(1, sequence_length): 
+              if arc_pred[m][n] > 0:
+                args.append(n)
+          args = list(set(args))
+          for m in range(1, sequence_length):
+            token = list(sent[m-1])[:4] + ['+' if m in tops else '-', '+' if m in args else '-', '_']
+            for arg_idx, arg in enumerate(args):
+              token.append('_' if arc_pred[m][arg] <= 0 else self.vocabs['rels'][rel_pred[m][arg]])
+            f.write('\t'.join(token)+'\n')
+        else:
+          for m in range(1,sequence_length):
+            for n in range(0, sequence_length):
+              if arc_pred[m][n] > 0:
+                token = list(sent[m-1])
+                token.insert(5, '_')
+                token.append('_')
+                token.append('_')
+                token[6] = self.vocabs['heads'][n]
+                token[7] = self.vocabs['rels'][rel_pred[m][n]]
+                f.write('\t'.join(token)+'\n')
         j += 1
         if j < len(inv_idxs):
           f.write('\n')
