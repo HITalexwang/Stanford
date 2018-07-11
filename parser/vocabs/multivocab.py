@@ -58,14 +58,18 @@ class Multivocab(Configurable):
     """"""
     # TODO check to see if a word is all unk, and if so, replace it with a random vector
     #embeddings = [vocab(moving_params=moving_params) for vocab in self]
-    if self.concat_elmo:
+    if self.concat_all:
+      print ('### Concating All embeddings ({}) ###'.format(', '.join([vocab.name for vocab in self])))
+      embeddings = [vocab(moving_params=moving_params) for vocab in self]
+      embeds = tf.concat(embeddings, axis=2)
+    elif self.concat_elmo:
       embeddings = []
       for vocab in self:
         if vocab.name == 'elmo':
           elmo_embedding = vocab(moving_params=moving_params)
         else:
           embeddings.append(vocab(moving_params=moving_params))
-      embeds = tf.concat([tf.add_n(embeddings), elmo_embedding], axis = 2)
+      embeds = tf.concat([tf.add_n(embeddings), elmo_embedding], axis=2)
     else:
       embeddings = [vocab(moving_params=moving_params) for vocab in self]
       embeds = tf.add_n(embeddings)

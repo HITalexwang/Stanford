@@ -235,6 +235,12 @@ class Configurable(object):
     return self.getboolean('skip_header')
   
   #=============================================================
+  # [Multivocab]
+  @property
+  def concat_all(self):
+    return self.getboolean('concat_all')
+
+  #=============================================================
   # [Elmo Vocab]
   @property
   def concat_elmo(self):

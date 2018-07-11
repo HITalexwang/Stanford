@@ -82,7 +82,10 @@ class NN(Configurable):
         #print ("drop_masks[i]:",drop_masks[i]," scale_mask:",scale_mask)
         #exit()
         if self.moving_params is None:
-          embedding *= drop_masks[i]*scale_mask
+          if self.replace_drop:
+            embedding = tf.where()
+          else:
+            embedding *= drop_masks[i]*scale_mask
         embeddings.append(embedding)
         i += 1
     return tf.concat(embeddings, 2)
