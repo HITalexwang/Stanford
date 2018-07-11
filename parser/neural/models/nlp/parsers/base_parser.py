@@ -182,6 +182,14 @@ class BaseParser(NN):
 
   #=============================================================
   def write_probs(self, sents, output_file, probs, inv_idxs, merge_lines):
+    if self.data_form == 'tree':
+      self.write_probs4tree(sents, output_file, probs, inv_idxs, merge_lines)
+    elif self.data_form == 'graph':
+      self.write_probs4graph(sents, output_file, probs, inv_idxs, merge_lines)
+    return
+
+  #=============================================================
+  def write_probs4tree(self, sents, output_file, probs, inv_idxs, merge_lines):
     """"""
     
     #parse_algorithm = self.parse_algorithm 
@@ -209,13 +217,49 @@ class BaseParser(NN):
           token = list(token)
           # add the merge line
           if (int(token[0]) in merge_line.keys()):
-          	f.write(merge_line[int(token[0])]+'\n')
+            f.write(merge_line[int(token[0])]+'\n')
           token.insert(5, '_')
           token.append('_')
           token.append('_')
           token[6] = self.vocabs['heads'][arc_pred]
           token[7] = self.vocabs['rels'][rel_pred]
           f.write('\t'.join(token)+'\n')
+        j += 1
+        if j < len(inv_idxs):
+          f.write('\n')
+    return
+
+  #=============================================================
+  def write_probs4graph(self, sents, output_file, probs, inv_idxs, merge_lines):
+    """"""
+    
+    #parse_algorithm = self.parse_algorithm 
+    
+    # Turns list of tuples of tensors into list of matrices
+    arc_preds = [arc_prob for batch in probs for arc_prob in batch[0]]
+    rel_preds = [rel_prob for batch in probs for rel_prob in batch[1]]
+    tokens_to_keep = [weight for batch in probs for weight in batch[2]]
+    tokens = [sent for batch in sents for sent in batch]
+    
+    with codecs.open(output_file, 'w', encoding='utf-8', errors='ignore') as f:
+      j = 0
+      for i in inv_idxs:
+        sent, arc_pred, rel_pred, weights = tokens[i], arc_preds[i], rel_preds[i], tokens_to_keep[i]
+        sent = zip(*sent)
+        sequence_length = int(np.sum(weights))+1
+        arc_pred = arc_pred[:sequence_length][:,:sequence_length]
+
+        #for token, arc_pred, rel_pred, weight in zip(sent, arc_preds[1:], rel_preds[1:], weights[1:]):
+        for m in range(1,sequence_length):
+          for n in range(0, sequence_length):
+            if arc_pred[m][n] > 0:
+              token = list(sent[m-1])
+              token.insert(5, '_')
+              token.append('_')
+              token.append('_')
+              token[6] = self.vocabs['heads'][n]
+              token[7] = self.vocabs['rels'][rel_pred[m][n]]
+              f.write('\t'.join(token)+'\n')
         j += 1
         if j < len(inv_idxs):
           f.write('\n')
@@ -293,7 +337,7 @@ class BaseParser(NN):
   @property
   def train_keys(self):
     if self.data_form == 'graph':
-      return ('n_tokens', 'n_seqs', 'loss', 'n_rel_correct', 'n_arc_correct', 'n_correct')
+      return ('n_tokens', 'n_seqs', 'loss', 'n_rel_correct', 'n_arc_correct', 'n_correct', 'n_arc_targets', 'n_arc_preds')
     else:
       return ('n_tokens', 'n_seqs', 'loss', 'n_rel_correct', 'n_arc_correct', 'n_correct', 'n_seqs_correct')
   
@@ -314,7 +358,7 @@ class BaseParser(NN):
   @property
   def parse_keys(self):
     if self.data_form == 'graph':
-      return ('arc_logits', 'rel_logits', 'tokens_to_keep')
+      return ('arc_preds', 'rel_preds', 'tokens_to_keep')
     else:
       return ('arc_probs', 'rel_probs', 'tokens_to_keep')
 

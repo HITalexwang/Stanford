@@ -343,6 +343,9 @@ class Configurable(object):
   @property
   def l2_rate(self):
     return self.getfloat('l2_rate')
+  @property
+  def lamb(self):
+    return self.getfloat('lamb')
   
   #=============================================================
   # [Dataset]

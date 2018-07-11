@@ -207,7 +207,11 @@ class Network(Configurable):
             valid_time = 0
             with codecs.open(os.path.join(self.save_dir, 'sanity_check'), 'w', encoding='utf-8', errors='ignore') as f:
               return_check = False if self.data_form == 'graph' else True
-              for feed_dict, sents in validset.iterbatches(return_check=return_check):
+              for batch in validset.iterbatches(return_check=return_check):
+                if self.data_form == 'graph':
+                  feed_dict = batch
+                else:
+                  feed_dict, sents = batch
                 start_time = time.time()
                 batch_values = sess.run(valid_outputs+valid_outputs2, feed_dict=feed_dict)
                 batch_time = time.time() - start_time
@@ -215,7 +219,8 @@ class Network(Configurable):
                 valid_accumulators += batch_values[:len(valid_outputs)]
                 valid_preds = batch_values[len(valid_outputs):]
                 valid_time += batch_time
-                validset.check(valid_preds, sents, f)
+                if self.data_form == 'tree':
+                  validset.check(valid_preds, sents, f)
             # update history
             trainset.update_history(self.history['train'], train_accumulators)
             current_acc = validset.update_history(self.history['valid'], valid_accumulators)
@@ -276,7 +281,7 @@ class Network(Configurable):
       print('Parsing {0} file(s) took {1} seconds'.format(len(input_files), time.time()-start_time))
     """
     return
-  
+
   #=============================================================
   def train_hinge(self, load=False):
     """"""
@@ -414,144 +419,7 @@ class Network(Configurable):
         break
       print ('### Finish Training! ###')
     return
-  """
-  #=============================================================
-  def train_hinge(self, load=False):
-    """"""
-    
-    # prep the configurables
-    self.add_file_vocabs(self.parse_files)
-    trainset = Trainset.from_configurable(self, self.vocabs, True, True, self.ts_lstm, self.stacked_cnn, nlp_model=self.nlp_model)
-    with tf.variable_scope(self.name.title()):
-      train_tensors = trainset()
-    train = self.optimizer(tf.losses.get_total_loss())
-    # workaround for "partial_run() requires empty target_list"
-    # partial_run() does not receive ops
-    with tf.control_dependencies([train]):
-      dummy_train = tf.constant(0)
-    train_outputs = [train_tensors[hinge_key] for hinge_key in trainset.hinge_keys]
-    saver = tf.train.Saver(self.save_vars, max_to_keep=1)
-    validset = Parseset.from_configurable(self, self.vocabs, True, True, self.ts_lstm, self.stacked_cnn, nlp_model=self.nlp_model)
-    with tf.variable_scope(self.name.title(), reuse=True):
-      valid_tensors = validset(moving_params=self.optimizer)
-    valid_outputs = [valid_tensors[hinge_key] for hinge_key in validset.hinge_keys]
-    valid_outputs2 = [valid_tensors[valid_key] for valid_key in validset.valid_keys]
-    current_acc = 0
-    best_acc = 0
-    n_iters_since_improvement = 0
-    n_iters_in_epoch = 0
-    
-    # calling these properties is inefficient so we save them in separate variables
-    min_train_iters = self.min_train_iters
-    max_train_iters = self.max_train_iters
-    validate_every = self.validate_every
-    save_every = self.save_every
-    verbose = self.verbose
-    quit_after_n_iters_without_improvement = self.quit_after_n_iters_without_improvement
-    
-    # load or prep the history
-    if load:
-      self.history = pkl.load(open(os.path.join(self.save_dir, 'history.pkl')))
-    else:
-      self.history = {'train': defaultdict(list), 'valid': defaultdict(list)}
-    
-    # start up the session
-    config_proto = tf.ConfigProto()
-    if self.per_process_gpu_memory_fraction == -1:
-      config_proto.gpu_options.allow_growth = True
-    else:
-      config_proto.gpu_options.per_process_gpu_memory_fraction = self.per_process_gpu_memory_fraction
-    with tf.Session(config=config_proto) as sess:
-      sess.run(tf.global_variables_initializer())
-      if load:
-        saver.restore(sess, tf.train.latest_checkpoint(self.save_dir))
-      total_train_iters = sess.run(self.global_step)
-      train_accumulators = np.zeros(len(train_outputs[2:]))
-      train_time = 0
-      # training loop
-      while total_train_iters < max_train_iters:
-        for feed_dict in trainset.iterbatches():
-          start_time = time.time()
-          part = sess.partial_run_setup(train_outputs + [train_tensors['pred_scores_'],train_tensors['target_scores_']] + [dummy_train], 
-                                          [p for p in feed_dict] + [trainset.arc_placeholder])
-          #part = sess.partial_run_setup(train_outputs + [dummy_train], [p for p in feed_dict] + [trainset.arc_placeholder])
-          # Get arc_logits (or arc_probs) and tokens_to_keep first
-          arc_scores, tokens_to_keep, aps, ats = sess.partial_run(part, train_outputs[:2]+ [train_tensors['pred_scores_'],train_tensors['target_scores_']], feed_dict=feed_dict)
-          batch_values = sess.partial_run(part, train_outputs[2:] + [dummy_train])[:-1]
-          #if batch_values[2] < 0:
-          #  print ("loss:",batch_values[2])
-          batch_time = time.time() - start_time
-          # update accumulators
-          total_train_iters += 1
-          n_iters_since_improvement += 1
-          print (arc_scores, '\n\npred score:\n', aps, '\n\ntar score:\n', ats )
-          print ("loss:{},rel_cor:{},arc_cor:{},cor:{},n_gold:{},n_pred:{}".format(batch_values[2],batch_values[3],batch_values[4],
-            batch_values[5],batch_values[6],batch_values[7]))
-          train_accumulators += batch_values
-          train_time += batch_time
-          # possibly validate
-          if total_train_iters == 1 or (total_train_iters % validate_every == 0):
-            valid_accumulators = np.zeros(len(train_outputs[2:]))
-            valid_time = 0
-            with codecs.open(os.path.join(self.save_dir, 'sanity_check'), 'w', encoding='utf-8', errors='ignore') as f:
-              return_check = False if self.data_form == 'graph' else True
-              for batch in validset.iterbatches(return_check=return_check):
-                if self.data_form == 'graph':
-                  feed_dict = batch
-                else:
-                  feed_dict, sents = batch
-                start_time = time.time()
 
-                valid_part = sess.partial_run_setup(valid_outputs + valid_outputs2[1:2], [p for p in feed_dict] + [validset.arc_placeholder])
-                arc_scores, tokens_to_keep = sess.partial_run(valid_part, valid_outputs[:2], feed_dict=feed_dict)
-                valid_arc_preds = validset.feed_arc(arc_scores, tokens_to_keep)
-                batch_values = sess.partial_run(valid_part, valid_outputs[2:]+valid_outputs2[1:2], feed_dict=valid_arc_preds)
-
-                #batch_values = sess.run(valid_outputs+valid_outputs2, feed_dict=feed_dict)
-                batch_time = time.time() - start_time
-                # update accumulators
-                valid_accumulators += batch_values[:len(valid_outputs[2:])]
-                #valid_preds = batch_values[len(valid_outputs):]
-                valid_preds = [valid_arc_preds.values()[0]] + batch_values[-1:]
-                valid_time += batch_time
-                if self.data_form == 'tree':
-                  validset.check(valid_preds, sents, f)
-            # update history
-            trainset.update_history(self.history['train'], train_accumulators)
-            current_acc = validset.update_history(self.history['valid'], valid_accumulators)
-            # print
-            if verbose:
-              print('{0:6d}'.format(int(total_train_iters))+')') 
-              trainset.print_accuracy(train_accumulators, train_time)
-              validset.print_accuracy(valid_accumulators, valid_time)
-            train_accumulators = np.zeros(len(train_outputs[2:]))
-            train_time = 0
-            if current_acc > best_acc:
-              if verbose:
-                print('Saving model...')
-              best_acc = current_acc
-              n_iters_since_improvement = 0
-              saver.save(sess, os.path.join(self.save_dir, self.name.lower()),
-                         #global_step=self.global_epoch,
-                         write_meta_graph=False)
-              with open(os.path.join(self.save_dir, 'history.pkl'), 'w') as f:
-                pkl.dump(dict(self.history), f)
-            elif n_iters_since_improvement >= quit_after_n_iters_without_improvement and total_train_iters > min_train_iters:
-              break
-        else:
-          # We've completed one epoch
-          if total_train_iters <= min_train_iters:
-            saver.save(sess, os.path.join(self.save_dir, self.name.lower()),
-                       #global_step=self.global_epoch,
-                       write_meta_graph=False)
-            with open(os.path.join(self.save_dir, 'history.pkl'), 'w') as f:
-              pkl.dump(dict(self.history), f)
-          sess.run(self.global_epoch.assign_add(1.))
-          continue
-        break
-      print ('### Finish Training! ###')
-    return
-  """
   #=============================================================
   def parse(self, input_files, output_dir=None, output_file=None):
     """"""
