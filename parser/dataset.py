@@ -108,13 +108,14 @@ class Dataset(Configurable):
 
   #=============================================================
   def bucket4graph(self):
+    iter = self.iterfiles4sem15() if self.data_type == 'sem15' else self.iterfiles4graph()
     with Bucketer.from_configurable(self, self.n_buckets, name='bucketer-%s'%self.name) as bucketer:
-      splits = bucketer.compute_splits(len(sent) for sent in self.iterfiles4graph())
+      splits = bucketer.compute_splits(len(sent) for sent in iter)
       for i in xrange(len(splits)):
         splits[i] += 1
     for multibucket, vocab in self.iteritems():
         multibucket.open(splits, depth=vocab.depth, vocab_name=vocab.name)
-    iter = self.iterfiles4sem15() if self.data_type == 'sem15' else self.iterfiles4graph() 
+    iter = self.iterfiles4sem15() if self.data_type == 'sem15' else self.iterfiles4graph()
     for sid, sent in enumerate(iter):
       #print (sent)
       for i in xrange(len(self)):
