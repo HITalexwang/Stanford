@@ -64,7 +64,7 @@ class Network(Configurable):
       tag_vocab = TagVocab.from_configurable(self, initialize_zero=False)
     else:
       print ("### Data form: {} ###\n### Loading word vocab ###".format(self.data_form))
-      word_vocab = WordVocab.from_configurable(self)
+      word_vocab = WordVocab.from_configurable(self, initialize_zero=False)
       word_vocabs = [word_vocab]
       #print ("word_vocab len: ", word_vocab.counts)
       if (self.use_pretrained):

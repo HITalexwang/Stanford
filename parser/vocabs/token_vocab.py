@@ -41,7 +41,7 @@ class TokenVocab(BaseVocab):
     """"""
      
     recount = kwargs.pop('recount', False)
-    initialize_zero = kwargs.pop('initialize_zero', True)
+    initialize_zero = kwargs.pop('initialize_zero', False)
     super(TokenVocab, self).__init__(*args, **kwargs)
     #print ("TokenVocab, __init__, recount:%s, self.filename:%s"%(recount, self.filename))
     if recount:
