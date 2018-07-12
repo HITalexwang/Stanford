@@ -248,6 +248,7 @@ class BaseParser(NN):
         sent = zip(*sent)
         sequence_length = int(np.sum(weights))+1
         arc_pred = arc_pred[:sequence_length][:,:sequence_length]
+        merge_line = merge_lines[j]
         #print (rel_pred)
         #for token, arc_pred, rel_pred, weight in zip(sent, arc_preds[1:], rel_preds[1:], weights[1:]):
         if self.data_type == 'sem15':
@@ -261,6 +262,8 @@ class BaseParser(NN):
           args = list(set(args))
           for m in range(1, sequence_length):
             token = list(sent[m-1])[:4] + ['+' if m in tops else '-', '+' if m in args else '-', '_']
+            if (int(token[0]) in merge_line.keys()):
+              f.write(merge_line[int(token[0])]+'\n')
             for arg_idx, arg in enumerate(args):
               token.append('_' if arc_pred[m][arg] <= 0 else self.vocabs['rels'][rel_pred[m][arg]])
             f.write('\t'.join(token)+'\n')

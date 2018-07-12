@@ -225,8 +225,14 @@ class Dataset(Configurable):
     for data_file in self.data_files:
       with codecs.open(data_file, encoding='utf-8', errors='ignore') as f:
         buff, args, tops, sent = [], [], [], []
+        merge_line = {}
         for line in f:
           line = line.strip()
+          if line and line.startswith('#'):
+            if 1 not in merge_line:
+              merge_line[1] = line
+            else:
+              merge_line[1] += '\n'+line
           if line and not line.startswith('#'):
             items = line.split('\t')
             if not re.match('[0-9]+[-.][0-9]+', line):
@@ -236,7 +242,8 @@ class Dataset(Configurable):
               if items[5] == '+':
                 args.append(items[0])
           elif buff:
-            self.merge_lines.append({})
+            self.merge_lines.append(merge_line)
+            merge_line = {}
             sent = []
             for idx, items in enumerate(buff):
               prefix = items[:4]+['_',items[6]]
