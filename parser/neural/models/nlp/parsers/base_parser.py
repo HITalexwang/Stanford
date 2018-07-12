@@ -267,10 +267,12 @@ class BaseParser(NN):
             for arg_idx, arg in enumerate(args):
               token.append('_' if arc_pred[m][arg] <= 0 else self.vocabs['rels'][rel_pred[m][arg]])
             f.write('\t'.join(token)+'\n')
-        else:
+        elif self.data_type == 'sem16':
           for m in range(1,sequence_length):
+            has_head = False
             for n in range(0, sequence_length):
               if arc_pred[m][n] > 0:
+                has_head = True
                 token = list(sent[m-1])
                 token.insert(5, '_')
                 token.append('_')
@@ -278,6 +280,20 @@ class BaseParser(NN):
                 token[6] = self.vocabs['heads'][n]
                 token[7] = self.vocabs['rels'][rel_pred[m][n]]
                 f.write('\t'.join(token)+'\n')
+            if not has_head:
+              best_score = arc_pred[m][1]
+              best_head = 1
+              for n in range(2, sequence_length):
+                if arc_pred[m][n] > best_score:
+                  best_score = arc_pred[m][n]
+                  best_head = n
+              token = list(sent[m-1])
+              token.insert(5, '_')
+              token.append('_')
+              token.append('_')
+              token[6] = self.vocabs['heads'][best_head]
+              token[7] = self.vocabs['rels'][rel_pred[m][best_head]]
+              f.write('\t'.join(token)+'\n')
         j += 1
         if j < len(inv_idxs):
           f.write('\n')
@@ -375,8 +391,10 @@ class BaseParser(NN):
   #=============================================================
   @property
   def parse_keys(self):
-    if self.data_form == 'graph':
+    if self.data_form == 'graph' and self.data_type == 'sem15':
       return ('arc_preds', 'rel_preds', 'tokens_to_keep')
+    if self.data_form == 'graph' and self.data_type == 'sem16':
+      return ('arc_logits', 'rel_preds', 'tokens_to_keep')
     else:
       return ('arc_probs', 'rel_probs', 'tokens_to_keep')
 
