@@ -262,7 +262,7 @@ class Parser(BaseParser):
       # Max label index of each possible arc (n x b x b)
       rel_idxs = tf.to_int32(tf.argmax(rel_logits, axis=3))
       # (n x b x b)
-      rel_preds = arc_targets * rel_idxs
+      rel_preds = rel_idxs * (arc_preds if moving_params is not None else arc_targets)
       # (n x b x b)
       rel_targets = self.vocabs['rels'].placeholder
       # (n x b x b)

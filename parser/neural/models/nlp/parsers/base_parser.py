@@ -254,10 +254,10 @@ class BaseParser(NN):
         if self.data_type == 'sem15':
           tops, args = [], []
           for m in range(1,sequence_length):
-            if arc_pred[m][0] > 0:
+            if rel_pred[m][0] > 0:
                 tops.append(m)
             for n in range(1, sequence_length): 
-              if arc_pred[m][n] > 0:
+              if rel_pred[m][n] > 0:
                 args.append(n)
           args = list(set(args))
           for m in range(1, sequence_length):
@@ -265,13 +265,16 @@ class BaseParser(NN):
             if (int(token[0]) in merge_line.keys()):
               f.write(merge_line[int(token[0])]+'\n')
             for arg_idx, arg in enumerate(args):
-              token.append('_' if arc_pred[m][arg] <= 0 else self.vocabs['rels'][rel_pred[m][arg]])
+              token.append('_' if rel_pred[m][arg] <= 0 else self.vocabs['rels'][rel_pred[m][arg]])
             f.write('\t'.join(token)+'\n')
         elif self.data_type == 'sem16':
+          if len(rel_pred.shape) == 3:
+            rel_logit = rel_pred
+            rel_pred = np.argmax(rel_pred, axis=2)
           for m in range(1,sequence_length):
             has_head = False
             for n in range(0, sequence_length):
-              if arc_pred[m][n] > 0:
+              if rel_pred[m][n] > 0:
                 has_head = True
                 token = list(sent[m-1])
                 token.insert(5, '_')
@@ -280,6 +283,7 @@ class BaseParser(NN):
                 token[6] = self.vocabs['heads'][n]
                 token[7] = self.vocabs['rels'][rel_pred[m][n]]
                 f.write('\t'.join(token)+'\n')
+            #"""
             if not has_head:
               best_score = arc_pred[m][1]
               best_head = 1
@@ -292,8 +296,11 @@ class BaseParser(NN):
               token.append('_')
               token.append('_')
               token[6] = self.vocabs['heads'][best_head]
-              token[7] = self.vocabs['rels'][rel_pred[m][best_head]]
+              best_rel = np.argmax(rel_logit[m][best_head][4:]) + 4
+              token[7] = self.vocabs['rels'][best_rel]
+              #token[7] = self.vocabs['rels'][rel_pred[m][best_head]]
               f.write('\t'.join(token)+'\n')
+           #"""
         j += 1
         if j < len(inv_idxs):
           f.write('\n')
@@ -394,7 +401,7 @@ class BaseParser(NN):
     if self.data_form == 'graph' and self.data_type == 'sem15':
       return ('arc_preds', 'rel_preds', 'tokens_to_keep')
     if self.data_form == 'graph' and self.data_type == 'sem16':
-      return ('arc_logits', 'rel_preds', 'tokens_to_keep')
+      return ('arc_logits', 'rel_logits', 'tokens_to_keep')
     else:
       return ('arc_probs', 'rel_probs', 'tokens_to_keep')
 
