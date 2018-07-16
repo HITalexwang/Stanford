@@ -67,11 +67,14 @@ class SubtokenVocab(TokenVocab):
     return
   
   #=============================================================
-  def __call__(self, placeholder=None, moving_params=None):
+  def __call__(self, placeholder=None, moving_params=None, drop_mask=None):
     """"""
     
     placeholder = self.generate_placeholder() if placeholder is None else placeholder
     embeddings = self.multibucket(self, keep_prob=self.embed_keep_prob, moving_params=moving_params)
+    if moving_params is None and drop_mask is not None:
+      #print (self.name, "replace drop")
+      placeholder = drop_mask * placeholder + (1 - drop_mask) * self.DROP
     return tf.nn.embedding_lookup(embeddings, placeholder)
   
   #=============================================================

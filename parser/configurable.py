@@ -355,6 +355,9 @@ class Configurable(object):
   @property
   def lamb(self):
     return self.getfloat('lamb')
+  @property
+  def replace_drop(self):
+    return self.getboolean('replace_drop')
   
   #=============================================================
   # [Dataset]

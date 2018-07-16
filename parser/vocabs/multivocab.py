@@ -54,13 +54,16 @@ class Multivocab(Configurable):
     return
   
   #=============================================================
-  def __call__(self, placeholder=None, moving_params=None):
+  def __call__(self, placeholder=None, moving_params=None, drop_mask=None):
     """"""
     # TODO check to see if a word is all unk, and if so, replace it with a random vector
     #embeddings = [vocab(moving_params=moving_params) for vocab in self]
     if self.concat_all:
       print ('### Concating All embeddings ({}) ###'.format(', '.join([vocab.name for vocab in self])))
-      embeddings = [vocab(moving_params=moving_params) for vocab in self]
+      if drop_mask is not None:
+        embeddings = [vocab(moving_params=moving_params, drop_mask=drop_mask) for vocab in self]
+      else:
+        embeddings = [vocab(moving_params=moving_params) for vocab in self]
       embeds = tf.concat(embeddings, axis=2)
     elif self.concat_elmo:
       embeddings = []

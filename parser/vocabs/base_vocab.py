@@ -83,11 +83,14 @@ class BaseVocab(Configurable):
     return self.placeholder
   
   #=============================================================
-  def __call__(self, placeholder=None, moving_params=None):
+  def __call__(self, placeholder=None, moving_params=None, drop_mask=None):
     """"""
     
     placeholder = self.generate_placeholder() if placeholder is None else placeholder
     embeddings = self.embeddings if moving_params is None else moving_params.average(self.embeddings)
+    if moving_params is None and drop_mask is not None:
+      #print (self.name, "replace drop")
+      placeholder = drop_mask * placeholder + (1 - drop_mask) * self.DROP
     return tf.nn.embedding_lookup(embeddings, placeholder)
   
   #=============================================================

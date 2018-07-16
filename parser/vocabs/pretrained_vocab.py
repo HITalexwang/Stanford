@@ -52,10 +52,10 @@ class PretrainedVocab(BaseVocab):
     return
   
   #=============================================================
-  def __call__(self, placeholder=None, moving_params=None):
+  def __call__(self, placeholder=None, moving_params=None, drop_mask=None):
     """"""
     
-    embeddings = super(PretrainedVocab, self).__call__(placeholder, moving_params=moving_params)
+    embeddings = super(PretrainedVocab, self).__call__(placeholder, moving_params=moving_params, drop_mask=drop_mask)
     # (n x b x d') -> (n x b x d)
     with tf.variable_scope(self.name.title()):
       matrix = linalg.linear(embeddings, self.token_embed_size, moving_params=moving_params)

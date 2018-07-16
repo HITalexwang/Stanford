@@ -351,7 +351,7 @@ class Network(Configurable):
           # update accumulators
           total_train_iters += 1
           n_iters_since_improvement += 1
-          print (arc_scores, '\n\narc logits:\n', aps)#, '\n\nrel logits:\n', ats )
+          print (arc_scores, '\n\nrel logits:\n', aps)#, '\n\nrel logits:\n', ats )
           print ("loss:{},rel_cor:{},arc_cor:{},cor:{},n_gold:{},n_pred:{}".format(batch_values[2],batch_values[3],batch_values[4],
             batch_values[5],batch_values[6],batch_values[7]))
           train_accumulators += batch_values

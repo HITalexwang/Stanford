@@ -48,6 +48,13 @@ class NN(Configurable):
   
   #=============================================================
   def embed_concat(self, vocabs, vocabs_to_merge=[['words', 'lemmas'], ['tags', 'xtags']]):
+    if self.data_form == 'graph':
+      return self.embed_concat_cat(vocabs)
+    else:
+      return self.embed_concat_sum(vocabs, vocabs_to_merge)
+
+  #=============================================================
+  def embed_concat_sum(self, vocabs, vocabs_to_merge=[['words', 'lemmas'], ['tags', 'xtags']]):
     """"""
     
     merge_dict = {vocab.name:vocab.name for vocab in vocabs}
@@ -82,6 +89,45 @@ class NN(Configurable):
         #print ("drop_masks[i]:",drop_masks[i]," scale_mask:",scale_mask)
         #exit()
         if self.moving_params is None:
+          embedding *= drop_masks[i]*scale_mask
+        embeddings.append(embedding)
+        i += 1
+    return tf.concat(embeddings, 2)
+
+  #=============================================================
+  def embed_concat_cat(self, vocabs):
+    """"""
+    #print ("embed concat cat")
+    if self.moving_params is None:
+      placeholders = []
+      drop_masks = []
+      for vocab in vocabs:
+        placeholder = vocab.generate_placeholder()
+        if len(placeholder.get_shape().as_list()) == 3:
+          placeholder = tf.unstack(placeholder, axis=2)[0]
+        placeholders.append(placeholder)
+
+        drop_mask = tf.expand_dims(linalg.random_mask(vocab.embed_keep_prob, tf.shape(placeholder)), 2)
+        drop_masks.append(drop_mask)
+      total_masks = tf.add_n(drop_masks)
+      scale_mask = len(drop_masks) / tf.maximum(total_masks, 1.)
+    embed_dict = {}
+    i = 0
+    for vocab in vocabs:
+      if self.moving_params is None and self.replace_drop:
+        embed_dict[vocab.name] = vocab(moving_params=self.moving_params, drop_mask=tf.to_int32(tf.squeeze(drop_masks[i], axis=2)))
+        i += 1
+      else:
+        embed_dict[vocab.name] = vocab(moving_params=self.moving_params)
+    embeddings = []
+    i = 0
+    for vocab in vocabs:
+      if vocab.name in embed_dict:
+        embedding = embed_dict[vocab.name]
+        #print ("nn.py(embed_concat):embedding:",embedding)
+        #print ("drop_masks[i]:",drop_masks[i]," scale_mask:",scale_mask)
+        #exit()
+        if self.moving_params is None and not self.replace_drop:
           embedding *= drop_masks[i]*scale_mask
         embeddings.append(embedding)
         i += 1
