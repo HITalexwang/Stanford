@@ -459,6 +459,7 @@ class Network(Configurable):
         with tf.variable_scope(self.name.title(), reuse=True):
           parse_tensors = parseset(moving_params=self.optimizer)
         parse_outputs = [parse_tensors[parse_key] for parse_key in parseset.parse_keys]
+        valid_outputs = [parse_tensors[train_key] for train_key in parseset.train_keys]
 
         input_dir, input_file = os.path.split(input_file)
         if output_dir is None and output_file is None:
@@ -473,11 +474,15 @@ class Network(Configurable):
         start_time = time.time()
         probs = []
         sents = []
+        parse_accumulators = np.zeros(len(valid_outputs))
         for feed_dict, tokens in parseset.iterbatches(shuffle=False):
-          probs.append(sess.run(parse_outputs, feed_dict=feed_dict))
+          batch_values = sess.run(valid_outputs+parse_outputs, feed_dict=feed_dict)
+          probs.append(batch_values[len(valid_outputs):])
           sents.append(tokens)
+          parse_accumulators += batch_values[:len(valid_outputs)]
         parseset.write_probs(sents, output_path, probs)
     if self.verbose:
+      parseset.print_accuracy(parse_accumulators, time.time()-start_time)
       print('Parsing {0} file(s) took {1} seconds'.format(len(input_files), time.time()-start_time))
     return
   

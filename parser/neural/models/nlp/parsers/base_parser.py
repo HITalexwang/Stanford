@@ -91,7 +91,7 @@ class BaseParser(NN):
       n_tokens, n_seqs, loss, rel_corr, arc_corr, corr, seq_corr = accumulators
     elif self.data_form == 'graph':
       n_tokens, n_seqs, loss, rel_corr, arc_corr, corr, n_gold_arcs, n_pred_arcs = accumulators
-
+      #print (n_tokens, n_seqs, loss, rel_corr, arc_corr, corr, n_gold_arcs, n_pred_arcs)
     if self.data_form == 'tree':
       acc_dict = {
         'Loss': loss,
@@ -279,6 +279,8 @@ class BaseParser(NN):
           if len(rel_pred.shape) == 3:
             rel_logit = rel_pred
             rel_pred = np.argmax(rel_pred, axis=2)
+          #print (arc_pred)
+          #print (rel_pred)
           for m in range(1,sequence_length):
             has_head = False
             for n in range(0, sequence_length):
