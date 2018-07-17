@@ -339,11 +339,11 @@ class Network(Configurable):
       while total_train_iters < max_train_iters:
         for feed_dict in trainset.iterbatches():
           start_time = time.time()
-          part = sess.partial_run_setup(train_outputs + [train_tensors['arc_logits'],train_tensors['rel_logits']] + [dummy_train], 
+          part = sess.partial_run_setup(train_outputs + [train_tensors['arc_logits'],train_tensors['rel_preds']] + [dummy_train], 
                                           [p for p in feed_dict] + [trainset.arc_placeholder])
           #part = sess.partial_run_setup(train_outputs + [dummy_train], [p for p in feed_dict] + [trainset.arc_placeholder])
           # Get arc_logits (or arc_probs) and tokens_to_keep first
-          arc_scores, tokens_to_keep, aps, ats = sess.partial_run(part, train_outputs[:2]+ [train_tensors['arc_logits'],train_tensors['rel_logits']], feed_dict=feed_dict)
+          arc_scores, tokens_to_keep, aps, ats = sess.partial_run(part, train_outputs[:2]+ [train_tensors['arc_logits'],train_tensors['rel_preds']], feed_dict=feed_dict)
           batch_values = sess.partial_run(part, train_outputs[2:] + [dummy_train])[:-1]
           #if batch_values[2] < 0:
           #  print ("loss:",batch_values[2])
@@ -351,7 +351,7 @@ class Network(Configurable):
           # update accumulators
           total_train_iters += 1
           n_iters_since_improvement += 1
-          print (arc_scores, '\n\nrel logits:\n', aps)#, '\n\nrel logits:\n', ats )
+          print (arc_scores, '\n\nrel preds:\n', ats)#, '\n\nrel logits:\n', ats )
           print ("loss:{},rel_cor:{},arc_cor:{},cor:{},n_gold:{},n_pred:{}".format(batch_values[2],batch_values[3],batch_values[4],
             batch_values[5],batch_values[6],batch_values[7]))
           train_accumulators += batch_values
