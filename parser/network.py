@@ -108,7 +108,11 @@ class Network(Configurable):
       self._vocabs.insert(1, position_vocab)
     self._global_step = tf.Variable(0., trainable=False, name='global_step')
     self._global_epoch = tf.Variable(0., trainable=False, name='global_epoch')
-    self._optimizer = RadamOptimizer.from_configurable(self, global_step=self.global_step)
+    if self.use_lazy_adam:
+      self._optimizer = tf.contrib.opt.LazyAdamOptimizer(learning_rate=1e-3, beta1=0, beta2=0.95, epsilon=1e-08)
+    else:
+      self._optimizer = RadamOptimizer.from_configurable(self, global_step=self.global_step)
+    print (self.optimizer.__class__.__name__)
     self._ts_lstm = None
     self._stacked_cnn = None
     if self.use_tslstm:
@@ -150,7 +154,10 @@ class Network(Configurable):
       train_tensors = trainset()
     update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
     with tf.control_dependencies(update_ops):
-      train = self.optimizer(tf.losses.get_total_loss())
+      if self.use_lazy_adam:
+        train = self.optimizer.minimize(tf.losses.get_total_loss())
+      else:
+        train = self.optimizer(tf.losses.get_total_loss())
     train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
     saver = tf.train.Saver(self.save_vars, max_to_keep=1)
     validset = Parseset.from_configurable(self, self.vocabs, True, False, self.ts_lstm, self.stacked_cnn, nlp_model=self.nlp_model)

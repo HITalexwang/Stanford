@@ -65,15 +65,15 @@ def linear(inputs, output_size, batch_norm=False, n_splits=1, add_bias=True, ini
       mat = np.concatenate([mat]*n_splits, axis=1)
       initializer = tf.constant_initializer(mat)
     matrix = tf.get_variable('Weights', [input_size, output_size], initializer=initializer)
-    if moving_params is not None:
+    if moving_params is not None and moving_params.__class__.__name__ is 'RadamOptimizer':
       matrix = moving_params.average(matrix)
-    else:
+    elif moving_params is None:
       tf.add_to_collection('Weights', matrix)
     
     # Get the bias
     if add_bias:
       bias = tf.get_variable('Biases', [output_size], initializer=tf.zeros_initializer())
-      if moving_params is not None:
+      if moving_params is not None and moving_params.__class__.__name__ is 'RadamOptimizer':
         bias = moving_params.average(bias)
     else:
       bias = 0
@@ -135,9 +135,9 @@ def bilinear(inputs1, inputs2, output_size, n_splits=1, add_bias1=True, add_bias
       mat = orthonormal_initializer(inputs1_size, inputs2_size)[:,None,:]
       mat = np.concatenate([mat]*output_size, axis=1)
     weights = tf.get_variable('Weights', [inputs1_size, output_size, inputs2_size], initializer=initializer)
-    if moving_params is not None:
+    if moving_params is not None or moving_params.__class__.__name__ is 'RadamOptimizer':
       weights = moving_params.average(weights)
-    else:
+    elif moving_params is None:
       tf.add_to_collection('Weights', weights)
     
     # Do the multiplication

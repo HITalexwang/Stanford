@@ -87,7 +87,7 @@ class BaseVocab(Configurable):
     """"""
     
     placeholder = self.generate_placeholder() if placeholder is None else placeholder
-    embeddings = self.embeddings if moving_params is None else moving_params.average(self.embeddings)
+    embeddings = self.embeddings if moving_params is None or moving_params.__class__.__name__ is not 'RadamOptimizer' else moving_params.average(self.embeddings)
     if moving_params is None and drop_mask is not None:
       #print (self.name, "replace drop")
       placeholder = drop_mask * placeholder + (1 - drop_mask) * self.DROP

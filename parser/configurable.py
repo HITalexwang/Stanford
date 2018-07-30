@@ -449,7 +449,9 @@ class Configurable(object):
   @property
   def hinge_loss(self):
     return self.getboolean('hinge_loss')
-  
+  @property
+  def use_lazy_adam(self):
+    return self.getboolean('use_lazy_adam')
   
   #=============================================================
   # [Zipf / Bucketer]
