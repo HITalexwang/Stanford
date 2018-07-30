@@ -29,7 +29,8 @@ class Tagger(BaseTagger):
   """"""
   
   #=============================================================
-  def __call__(self, vocabs, moving_params=None):
+  #def __call__(self, vocabs, moving_params=None):
+  def __call__(self, vocabs, ts_lstm=None, arc_placeholder=None, stacked_cnn=None, moving_params=None):
     """"""
     
     top_recur = super(Tagger, self).__call__(vocabs, moving_params=moving_params)

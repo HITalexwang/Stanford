@@ -123,7 +123,8 @@ class BaseTagger(NN):
     return
 
   #=============================================================
-  def write_probs(self, sents, output_file, probs, inv_idxs):
+  #def write_probs(self, sents, output_file, probs, inv_idxs):
+  def write_probs(self, sents, output_file, probs, inv_idxs, merge_lines):
     """"""
     
     # Turns list of tuples of tensors into list of matrices
