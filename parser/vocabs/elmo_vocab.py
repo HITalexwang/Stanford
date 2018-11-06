@@ -96,7 +96,7 @@ class ElmoVocab(BaseVocab):
   #=============================================================
   def load_from_h5py(self, elmo_file, conll_files, embeddings, cur_idx, type="parseset"):
     """"""
-    with h5py.File(self.elmo_file, 'r') as f:
+    with h5py.File(elmo_file, 'r') as f:
       for sid, sent in enumerate(self.iter_sents(conll_files)):
         sent_ = '\t'.join(sent)
         sent_ = sent_.replace('/', '$backslash$').replace('.', '$period$')
