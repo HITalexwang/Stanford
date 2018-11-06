@@ -232,6 +232,12 @@ class Configurable(object):
     return self.getboolean('skip_header')
   
   #=============================================================
+  # [ELMo Vocab]
+  @property
+  def format(self):
+    return self.get('format')
+  
+  #=============================================================
   # [Retrained Vocab]
   @property
   def embed_loss(self):

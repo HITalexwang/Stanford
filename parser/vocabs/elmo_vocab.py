@@ -93,6 +93,21 @@ class ElmoVocab(BaseVocab):
           yield buff
 
   #=============================================================
+  def load_from_h5py(self, elmo_file, conll_files, embeddings, cur_idx, type="parseset"):
+    """"""
+    with h5py.File(self.elmo_file, 'r') as f:
+      for sid, sent in enumerate(self.iter_sents(conll_files)):
+        sent_ = '\t'.join(sent)
+        sent_ = sent_.replace('/', '$backslash$').replace('.', '$period$')
+        elmo = f[sent_].value
+        assert(len(elmo) == len(sent))
+        embeddings.extend(elmo)
+        for wid in xrange(len(sent)):
+          self[type+"-"+str(sid)+"-"+str(wid)] = cur_idx
+          cur_idx += 1
+    return embeddings, cur_idx
+
+  #=============================================================
   def load(self):
     """"""
     embeddings = []
@@ -100,6 +115,10 @@ class ElmoVocab(BaseVocab):
 
     if self.elmo_file:
       print ("### Loading ELMo for testset from {}! ###".format(self.elmo_file))
+      if self.format == "h5py":
+        embeddings, cur_idx = self.load_from_h5py(self.elmo_file, self.files, embeddings, 
+                                                  cur_idx, type="parseset")
+      """
       with h5py.File(self.elmo_file, 'r') as f:
         for sid, sent in enumerate(self.iter_sents(self.files)):
           sent_ = '\t'.join(sent)
@@ -110,10 +129,15 @@ class ElmoVocab(BaseVocab):
           for wid in xrange(len(sent)):
             self["parseset-"+str(sid)+"-"+str(wid)] = cur_idx
             cur_idx += 1
+      """
 
     else:
       if self.filename:
         print ("### Loading ELMo for trainset from {}! ###".format(self.filename))
+        if self.format == "h5py":
+          embeddings, cur_idx = self.load_from_h5py(self.filename, self.train_files, embeddings, 
+                                                    cur_idx, type="trainset")
+        """
         with h5py.File(self.filename, 'r') as f:
           for sid, sent in enumerate(self.iter_sents(self.train_files)):
             sent_ = '\t'.join(sent)
@@ -124,9 +148,14 @@ class ElmoVocab(BaseVocab):
             for wid in xrange(len(sent)):
               self["trainset-"+str(sid)+"-"+str(wid)] = cur_idx
               cur_idx += 1
+        """
 
       if self.parse_filename:
         print ("### Loading ELMo for parseset from {}! ###".format(self.parse_filename))
+        if self.format == "h5py":
+          embeddings, cur_idx = self.load_from_h5py(self.parse_filename, self.parse_files, embeddings, 
+                                                    cur_idx, type="parseset")
+        """
         with h5py.File(self.parse_filename, 'r') as f:
           for sid, sent in enumerate(self.iter_sents(self.parse_files)):
             sent_ = '\t'.join(sent)
@@ -137,6 +166,7 @@ class ElmoVocab(BaseVocab):
             for wid in xrange(len(sent)):
               self["parseset-"+str(sid)+"-"+str(wid)] = cur_idx
               cur_idx += 1
+        """
 
     try:
       embeddings = np.stack(embeddings)
