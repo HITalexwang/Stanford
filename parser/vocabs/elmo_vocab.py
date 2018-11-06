@@ -118,7 +118,10 @@ class ElmoVocab(BaseVocab):
         assert sid == int(bert["linex_index"])
         # rm [CLS] and [SEP]
         bert = bert["features"][1:-1]
-        assert(len(sent) == len(bert))
+        try:
+          assert(len(sent) == len(bert))
+        except:
+          print (sent, "\n", [b["token"] for b in bert])
 
         for wid in xrange(len(sent)):
           assert sent[wid].lower() == bert[wid]["token"]
@@ -161,7 +164,7 @@ class ElmoVocab(BaseVocab):
           embeddings, cur_idx = self.load_from_h5py(self.filename, self.train_files, embeddings, 
                                                     cur_idx, type="trainset")
         elif self.format == "json":
-          embeddings, cur_idx = self.load_from_h5py(self.filename, self.train_files, embeddings, 
+          embeddings, cur_idx = self.load_from_json(self.filename, self.train_files, embeddings, 
                                                     cur_idx, type="trainset")
         """
         with h5py.File(self.filename, 'r') as f:
