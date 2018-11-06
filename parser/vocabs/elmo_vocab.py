@@ -25,6 +25,7 @@ import gzip
 import warnings
 import h5py
 import re
+import json
 from collections import Counter
 
 import numpy as np
@@ -108,6 +109,25 @@ class ElmoVocab(BaseVocab):
     return embeddings, cur_idx
 
   #=============================================================
+  def load_from_json(self, elmo_file, conll_files, embeddings, cur_idx, type="parseset"):
+    """"""
+    with codecs.open(elmo_file, encoding='utf-8', errors='ignore') as f:
+      for sid, sent in enumerate(self.iter_sents(conll_files)):
+        line = f.readline()
+        bert = json.loads(line)
+        assert sid == int(bert["linex_index"])
+        # rm [CLS] and [SEP]
+        bert = bert["features"][1:-1]
+        assert(len(sent) == len(bert))
+
+        for wid in xrange(len(sent)):
+          assert sent[wid].lower() == bert[wid]["token"]
+          embeddings.append(np.array(bert[wid]["layers"][0]["values"]))
+          self[type+"-"+str(sid)+"-"+str(wid)] = cur_idx
+          cur_idx += 1
+    return embeddings, cur_idx
+
+  #=============================================================
   def load(self):
     """"""
     embeddings = []
@@ -117,6 +137,9 @@ class ElmoVocab(BaseVocab):
       print ("### Loading ELMo for testset from {}! ###".format(self.elmo_file))
       if self.format == "h5py":
         embeddings, cur_idx = self.load_from_h5py(self.elmo_file, self.files, embeddings, 
+                                                  cur_idx, type="parseset")
+      elif self.format == "json":
+        embeddings, cur_idx = self.load_from_json(self.elmo_file, self.files, embeddings, 
                                                   cur_idx, type="parseset")
       """
       with h5py.File(self.elmo_file, 'r') as f:
@@ -137,6 +160,9 @@ class ElmoVocab(BaseVocab):
         if self.format == "h5py":
           embeddings, cur_idx = self.load_from_h5py(self.filename, self.train_files, embeddings, 
                                                     cur_idx, type="trainset")
+        elif self.format == "json":
+          embeddings, cur_idx = self.load_from_h5py(self.filename, self.train_files, embeddings, 
+                                                    cur_idx, type="trainset")
         """
         with h5py.File(self.filename, 'r') as f:
           for sid, sent in enumerate(self.iter_sents(self.train_files)):
@@ -154,6 +180,9 @@ class ElmoVocab(BaseVocab):
         print ("### Loading ELMo for parseset from {}! ###".format(self.parse_filename))
         if self.format == "h5py":
           embeddings, cur_idx = self.load_from_h5py(self.parse_filename, self.parse_files, embeddings, 
+                                                    cur_idx, type="parseset")
+        elif self.format == "json":
+          embeddings, cur_idx = self.load_from_json(self.parse_filename, self.parse_files, embeddings, 
                                                     cur_idx, type="parseset")
         """
         with h5py.File(self.parse_filename, 'r') as f:
