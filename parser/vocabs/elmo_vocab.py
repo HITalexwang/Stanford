@@ -44,6 +44,7 @@ class ElmoVocab(BaseVocab):
     
     super(ElmoVocab, self).__init__(*args, **kwargs)
     
+    self._conll_idx = 1
     self._token_vocab = token_vocab
 
     self._elmo_file = elmo_file
@@ -232,6 +233,9 @@ class ElmoVocab(BaseVocab):
     return self._tok2idx.get(token, self.UNK)
 
   #=============================================================
+  @property
+  def conll_idx(self):
+    return self._conll_idx
   @property
   def token_vocab(self):
     return self._token_vocab
