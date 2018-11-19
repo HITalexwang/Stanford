@@ -236,6 +236,9 @@ class Configurable(object):
   @property
   def format(self):
     return self.get('format')
+  @property
+  def concat_elmo(self):
+    return self.getboolean('concat_elmo')
   
   #=============================================================
   # [Retrained Vocab]
