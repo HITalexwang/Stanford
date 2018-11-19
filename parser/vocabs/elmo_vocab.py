@@ -59,6 +59,14 @@ class ElmoVocab(BaseVocab):
     """"""
     
     embeddings = super(ElmoVocab, self).__call__(placeholder, moving_params=moving_params)
+    if moving_params is None:
+      keep_prob = self.embed_keep_prob
+    else:
+      keep_prob = 1
+    if keep_prob < 1:
+      batch_size, _, emb_size = tf.unstack(tf.shape(embeddings),3)
+      noise_shape = tf.stack([batch_size, 1, emb_size])
+      embeddings = tf.nn.dropout(embeddings, keep_prob, noise_shape=noise_shape)
     # (n x b x d') -> (n x b x d)
     with tf.variable_scope(self.name.title()):
       matrix = linalg.linear(embeddings, self.token_embed_size, moving_params=moving_params)
