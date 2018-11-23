@@ -25,7 +25,7 @@ from collections import Counter
 import numpy as np
 from scipy.optimize import curve_fit
 from scipy.stats import poisson, nbinom
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import tensorflow as tf
 
 from parser import Configurable

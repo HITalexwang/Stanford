@@ -216,12 +216,12 @@ if __name__ == '__main__':
   
   configurable = Configurable()
   token_vocab = WordVocab.from_configurable(configurable, 1)
-  token_vocab.fit_to_zipf()
+  #token_vocab.fit_to_zipf()
   if os.path.isfile('saves/defaults/chars.txt'):
     os.remove('saves/defaults/chars.txt')
   subtoken_vocab = CharVocab.from_vocab(token_vocab)
   subtoken_vocab = CharVocab.from_vocab(token_vocab)
   subtoken_vocab.token_vocab.count(configurable.valid_files)
   subtoken_vocab.index_tokens()
-  subtoken_vocab.fit_to_zipf()
+  #subtoken_vocab.fit_to_zipf()
   print('SubtokenVocab passes')

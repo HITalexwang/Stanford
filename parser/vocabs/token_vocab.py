@@ -28,7 +28,7 @@ import numpy as np
 import tensorflow as tf
 
 from parser.vocabs.base_vocab import BaseVocab
-from parser.misc.zipf import Zipf
+#from parser.misc.zipf import Zipf
 
 __all__ = ['WordVocab', 'LemmaVocab', 'TagVocab', 'XTagVocab', 'RelVocab']
 
@@ -164,7 +164,7 @@ if __name__ == '__main__':
     os.remove('saves/defaults/words.txt')
   token_vocab = WordVocab.from_configurable(configurable, 1)
   token_vocab = WordVocab.from_configurable(configurable, 1)
-  token_vocab.fit_to_zipf()
+  #token_vocab.fit_to_zipf()
   #pretrained_vocab = PretrainedVocab.from_vocab(token_vocab)
   #assert min(pretrained_vocab.counts.values()) == 1
   print('TokenVocab passed')

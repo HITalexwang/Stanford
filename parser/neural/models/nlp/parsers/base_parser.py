@@ -23,7 +23,7 @@ import re
 import codecs
 import numpy as np
 import tensorflow as tf
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 from parser.misc.colors import ctext, color_pattern
 from parser.misc.mst import nonprojective, argmax
