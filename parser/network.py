@@ -274,7 +274,7 @@ class Network(Configurable):
       for var in self.non_save_vars:
         if var.name.startswith('Elmo'):
           sess.run(var.initializer, feed_dict={self.elmo_vocab.embed_placeholder:self.elmo_vocab.elmo_embeddings})
-        if var.name.startswith('Pretrained'):
+        elif var.name.startswith('Pretrained'):
           sess.run(var.initializer, feed_dict={self.pretrained_vocab.embed_placeholder:self.pretrained_vocab.pretrained_embeddings})
         else:
           sess.run(var.initializer)
