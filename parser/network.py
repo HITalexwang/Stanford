@@ -74,6 +74,7 @@ class Network(Configurable):
         print ("### Loading pretrained vocab ###")
         pretrained_vocab = PretrainedVocab.from_vocab(word_vocab)
         word_vocabs.append(pretrained_vocab)
+        self._pretrained_vocab = pretrained_vocab
       
       if (self.use_elmo):
         print ("### Loading ELMo vocab ###")
@@ -172,10 +173,16 @@ class Network(Configurable):
     else:
       config_proto.gpu_options.per_process_gpu_memory_fraction = self.per_process_gpu_memory_fraction
     with tf.Session(config=config_proto) as sess:
+      feed_dict = {}
+      if self.use_pretrained:
+        feed_dict[self.pretrained_vocab.embed_placeholder] = self.pretrained_vocab.pretrained_embeddings
       if self.use_elmo:
-        sess.run(tf.global_variables_initializer(), feed_dict={self.elmo_vocab.embed_placeholder:self.elmo_vocab.elmo_embeddings})
-      else:
-        sess.run(tf.global_variables_initializer())
+        feed_dict[self.elmo_vocab.embed_placeholder] = self.elmo_vocab.elmo_embeddings
+      #if self.use_elmo:
+      #  sess.run(tf.global_variables_initializer(), feed_dict={self.elmo_vocab.embed_placeholder:self.elmo_vocab.elmo_embeddings})
+      #else:
+      #  sess.run(tf.global_variables_initializer())
+      sess.run(tf.global_variables_initializer(), feed_dict=feed_dict)
       if load:
         saver.restore(sess, tf.train.latest_checkpoint(self.save_dir))
       total_train_iters = sess.run(self.global_step)
@@ -267,6 +274,8 @@ class Network(Configurable):
       for var in self.non_save_vars:
         if var.name.startswith('Elmo'):
           sess.run(var.initializer, feed_dict={self.elmo_vocab.embed_placeholder:self.elmo_vocab.elmo_embeddings})
+        if var.name.startswith('Pretrained'):
+          sess.run(var.initializer, feed_dict={self.pretrained_vocab.embed_placeholder:self.pretrained_vocab.pretrained_embeddings})
         else:
           sess.run(var.initializer)
       saver.restore(sess, tf.train.latest_checkpoint(self.save_dir))
@@ -326,6 +335,8 @@ class Network(Configurable):
       for var in self.non_save_vars:
         if var.name.startswith('Elmo'):
           sess.run(var.initializer, feed_dict={self.elmo_vocab.embed_placeholder:self.elmo_vocab.elmo_embeddings})
+        if var.name.startswith('Pretrained'):
+          sess.run(var.initializer, feed_dict={self.pretrained_vocab.embed_placeholder:self.pretrained_vocab.pretrained_embeddings})
         else:
           sess.run(var.initializer)
  
@@ -398,6 +409,10 @@ class Network(Configurable):
   @property
   def elmo_vocab(self):
     return self._elmo_vocab
+  @property
+  def pretrained_vocab(self):
+    return self._pretrained_vocab
+  
 
 #***************************************************************
 if __name__ == '__main__':
