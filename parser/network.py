@@ -140,11 +140,14 @@ class Network(Configurable):
     train = self.optimizer(tf.losses.get_total_loss())
     train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
     saver = tf.train.Saver(self.save_vars, max_to_keep=1)
-    validset = Parseset.from_configurable(self, self.vocabs, True, nlp_model=self.nlp_model)
-    with tf.variable_scope(self.name.title(), reuse=True):
-      valid_tensors = validset(moving_params=self.optimizer)
-    valid_outputs = [valid_tensors[train_key] for train_key in validset.train_keys]
-    valid_outputs2 = [valid_tensors[valid_key] for valid_key in validset.valid_keys]
+    if self.parse_files:
+      validset = Parseset.from_configurable(self, self.vocabs, True, nlp_model=self.nlp_model)
+      with tf.variable_scope(self.name.title(), reuse=True):
+        valid_tensors = validset(moving_params=self.optimizer)
+      valid_outputs = [valid_tensors[train_key] for train_key in validset.train_keys]
+      valid_outputs2 = [valid_tensors[valid_key] for valid_key in validset.valid_keys]
+    else:
+      print ("No valid file, will train {} iters.".format(self.max_train_iters))
     current_acc = 0
     best_acc = 0
     n_iters_since_improvement = 0
@@ -188,63 +191,92 @@ class Network(Configurable):
       total_train_iters = sess.run(self.global_step)
       train_accumulators = np.zeros(len(train_outputs))
       train_time = 0
-      # training loop
-      while total_train_iters < max_train_iters:
-        for feed_dict in trainset.iterbatches():
-          start_time = time.time()
-          batch_values = sess.run(train_outputs + [train], feed_dict=feed_dict)[:-1]
-          batch_time = time.time() - start_time
-          # update accumulators
-          total_train_iters += 1
-          n_iters_since_improvement += 1
-          train_accumulators += batch_values
-          train_time += batch_time
-          # possibly validate
-          if total_train_iters == 1 or (total_train_iters % validate_every == 0):
-            valid_accumulators = np.zeros(len(train_outputs))
-            valid_time = 0
-            with codecs.open(os.path.join(self.save_dir, 'sanity_check'), 'w', encoding='utf-8', errors='ignore') as f:
-              for feed_dict, sents in validset.iterbatches(return_check=True):
-                start_time = time.time()
-                batch_values = sess.run(valid_outputs+valid_outputs2, feed_dict=feed_dict)
-                batch_time = time.time() - start_time
-                # update accumulators
-                valid_accumulators += batch_values[:len(valid_outputs)]
-                valid_preds = batch_values[len(valid_outputs):]
-                valid_time += batch_time
-                validset.check(valid_preds, sents, f)
-            # update history
-            trainset.update_history(self.history['train'], train_accumulators)
-            current_acc = validset.update_history(self.history['valid'], valid_accumulators)
-            # print
-            if verbose:
-              print('{0:6d}'.format(int(total_train_iters))+')') 
-              trainset.print_accuracy(train_accumulators, train_time)
-              validset.print_accuracy(valid_accumulators, valid_time)
-            train_accumulators = np.zeros(len(train_outputs))
-            train_time = 0
-            if current_acc > best_acc and total_train_iters > min_save_iters:
+      # with valid files
+      if self.parse_files:
+        # training loop
+        while total_train_iters < max_train_iters:
+          for feed_dict in trainset.iterbatches():
+            start_time = time.time()
+            batch_values = sess.run(train_outputs + [train], feed_dict=feed_dict)[:-1]
+            batch_time = time.time() - start_time
+            # update accumulators
+            total_train_iters += 1
+            n_iters_since_improvement += 1
+            train_accumulators += batch_values
+            train_time += batch_time
+            # possibly validate
+            if total_train_iters == 1 or (total_train_iters % validate_every == 0):
+              valid_accumulators = np.zeros(len(train_outputs))
+              valid_time = 0
+              with codecs.open(os.path.join(self.save_dir, 'sanity_check'), 'w', encoding='utf-8', errors='ignore') as f:
+                for feed_dict, sents in validset.iterbatches(return_check=True):
+                  start_time = time.time()
+                  batch_values = sess.run(valid_outputs+valid_outputs2, feed_dict=feed_dict)
+                  batch_time = time.time() - start_time
+                  # update accumulators
+                  valid_accumulators += batch_values[:len(valid_outputs)]
+                  valid_preds = batch_values[len(valid_outputs):]
+                  valid_time += batch_time
+                  validset.check(valid_preds, sents, f)
+              # update history
+              trainset.update_history(self.history['train'], train_accumulators)
+              current_acc = validset.update_history(self.history['valid'], valid_accumulators)
+              # print
               if verbose:
-                print('Saving model...')
-              best_acc = current_acc
-              n_iters_since_improvement = 0
+                print('{0:6d}'.format(int(total_train_iters))+')') 
+                trainset.print_accuracy(train_accumulators, train_time)
+                validset.print_accuracy(valid_accumulators, valid_time)
+              train_accumulators = np.zeros(len(train_outputs))
+              train_time = 0
+              if current_acc > best_acc and total_train_iters > min_save_iters:
+                if verbose:
+                  print('Saving model...')
+                best_acc = current_acc
+                n_iters_since_improvement = 0
+                saver.save(sess, os.path.join(self.save_dir, self.name.lower()),
+                           #global_step=self.global_epoch,
+                           write_meta_graph=False)
+                with open(os.path.join(self.save_dir, 'history.pkl'), 'w') as f:
+                  pkl.dump(dict(self.history), f)
+              elif n_iters_since_improvement >= quit_after_n_iters_without_improvement and total_train_iters > min_train_iters:
+                break
+          else:
+            # We've completed one epoch
+            if total_train_iters <= min_train_iters:
               saver.save(sess, os.path.join(self.save_dir, self.name.lower()),
                          #global_step=self.global_epoch,
                          write_meta_graph=False)
               with open(os.path.join(self.save_dir, 'history.pkl'), 'w') as f:
                 pkl.dump(dict(self.history), f)
-            elif n_iters_since_improvement >= quit_after_n_iters_without_improvement and total_train_iters > min_train_iters:
-              break
-        else:
-          # We've completed one epoch
-          if total_train_iters <= min_train_iters:
-            saver.save(sess, os.path.join(self.save_dir, self.name.lower()),
-                       #global_step=self.global_epoch,
-                       write_meta_graph=False)
-            with open(os.path.join(self.save_dir, 'history.pkl'), 'w') as f:
-              pkl.dump(dict(self.history), f)
-          continue
-        break
+            continue
+          break
+      # no valid file
+      else:
+        for no_valid_iters in range(max_train_iters):
+          for feed_dict in trainset.iterbatches():
+            start_time = time.time()
+            batch_values = sess.run(train_outputs + [train], feed_dict=feed_dict)[:-1]
+            batch_time = time.time() - start_time
+            # update accumulators
+            total_train_iters += 1
+            n_iters_since_improvement += 1
+            train_accumulators += batch_values
+            train_time += batch_time
+
+            if no_valid_iters % validate_every == 0:
+              # update history
+              trainset.update_history(self.history['train'], train_accumulators)
+              # print
+              if verbose:
+                print('{0:6d}'.format(int(no_valid_iters))+')') 
+                trainset.print_accuracy(train_accumulators, train_time)
+              train_accumulators = np.zeros(len(train_outputs))
+              train_time = 0
+              if verbose:
+                print('Saving model...')
+              saver.save(sess, os.path.join(self.save_dir, self.name.lower()),
+                          #global_step=self.global_epoch,
+                          write_meta_graph=False)
     print ("### Finish Training! ###")
     return
   
