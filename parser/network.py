@@ -147,7 +147,7 @@ class Network(Configurable):
       valid_outputs = [valid_tensors[train_key] for train_key in validset.train_keys]
       valid_outputs2 = [valid_tensors[valid_key] for valid_key in validset.valid_keys]
     else:
-      print ("No valid file, will train {} iters.".format(self.max_train_iters))
+      print ("### No valid file, will train {} iters ###".format(self.max_train_iters))
     current_acc = 0
     best_acc = 0
     n_iters_since_improvement = 0
@@ -259,7 +259,6 @@ class Network(Configurable):
             batch_time = time.time() - start_time
             # update accumulators
             total_train_iters += 1
-            n_iters_since_improvement += 1
             train_accumulators += batch_values
             train_time += batch_time
 
